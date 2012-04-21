@@ -26,7 +26,7 @@ func main() {
 	http.ListenAndServe(":8081", nil)
 }
 
-func mainIndex(w http.ResponseWriter, req *http.Request) {
+func showIndex(w http.ResponseWriter, req *http.Request) {
 	err := view.ExecuteTemplate(w, "index",
 		struct {
 			Title string
