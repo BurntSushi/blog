@@ -1,0 +1,27 @@
+{{define "header"}}<!doctype html>
+<!--[if lt IE 7]> <html class="no-js lt-ie9 lt-ie8 lt-ie7" lang="en"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js lt-ie9 lt-ie8" lang="en"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js lt-ie9" lang="en"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en"> <!--<![endif]-->
+<head>
+  <meta charset="iso-8859-1">
+  <title>Andrew Gallant's Blog {{if .Title}} :: .Title {{end}}</title>
+  <meta name="description"
+        content="Andrew Gallant's blog. I blog mostly about my own programming
+                 projects.">
+  <meta name="viewport" content="width=device-width">
+
+  <link rel="stylesheet" href="/css/normalize.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/print.css">
+</head>
+<body>
+  <div id="container"><div id="container2">
+  <header>
+    <h1>Andrew Gallant's Blog {{if .Title}} :: .Title {{end}</h1>
+    <hr>
+  </header>
+  <div id="content-cont">
+    <div id="content" role="main">
+{{end}}
+
