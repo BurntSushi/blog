@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 
@@ -8,23 +9,36 @@ import (
 )
 
 var (
+	err error
 	view *template.Template
 )
 
 func init() {
-	var err error
+	refreshData()
+}
+
+func main() {
+	r := mux.NewRouter()
+	r.HandleFunc("/refresh", showRefresh) // dev only!
+	r.HandleFunc("/", showIndex)
+	r.PathPrefix("/static").
+		Handler(http.StripPrefix("/static",
+								 http.FileServer(http.Dir("./static"))))
+
+	http.Handle("/", r)
+	http.ListenAndServe(":8081", nil)
+}
+
+func refreshData() {
 	view, err = template.New("view").ParseGlob("views/*.html")
 	if err != nil {
 		panic(err)
 	}
 }
 
-func main() {
-	r := mux.NewRouter()
-	r.HandleFunc("/", showIndex)
-
-	http.Handle("/", r)
-	http.ListenAndServe(":8081", nil)
+func showRefresh(w http.ResponseWriter, req *http.Request) {
+	refreshData()
+	fmt.Fprintln(w, "Data refreshed!")
 }
 
 func showIndex(w http.ResponseWriter, req *http.Request) {
