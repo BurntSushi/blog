@@ -1,0 +1,6 @@
+This is a very simple blog application for my homepage. It is my first
+web application with Go.
+
+Many thanks to manveru, whose own blog application greatly inspired mine:
+https://github.com/manveru/manveru.name
+
