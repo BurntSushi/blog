@@ -12,7 +12,8 @@ var (
 )
 
 func init() {
-	view, err := template.New("view").ParseGlob("views/*.html")
+	var err error
+	view, err = template.New("view").ParseGlob("views/*.html")
 	if err != nil {
 		panic(err)
 	}
