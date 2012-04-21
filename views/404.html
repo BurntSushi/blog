@@ -1,0 +1,8 @@
+{{ define "404" }}
+{{ template "header" . }}
+<h2>Page not found</h2>
+
+<p>The following could not be found: {{ .Location }}</p>
+
+{{ template "footer" . }}
+{{ end }}

@@ -1,27 +1,38 @@
 {{define "header"}}<!doctype html>
 <!--[if lt IE 7]> <html class="no-js lt-ie9 lt-ie8 lt-ie7" lang="en"> <![endif]-->
-<!--[if IE 7]>    <html class="no-js lt-ie9 lt-ie8" lang="en"> <![endif]-->
-<!--[if IE 8]>    <html class="no-js lt-ie9" lang="en"> <![endif]-->
+<!--[if IE 7]>		<html class="no-js lt-ie9 lt-ie8" lang="en"> <![endif]-->
+<!--[if IE 8]>		<html class="no-js lt-ie9" lang="en"> <![endif]-->
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en"> <!--<![endif]-->
 <head>
-  <meta charset="iso-8859-1">
+	<meta charset="iso-8859-1">
 	<title>Andrew Gallant's Blog {{if .Title}} :: {{.Title}} {{end}}</title>
-  <meta name="description"
-        content="Andrew Gallant's blog. I blog mostly about my own programming
-                 projects.">
-  <meta name="viewport" content="width=device-width">
+	<meta name="description"
+				content="Andrew Gallant's blog. I blog mostly about my own programming
+								 projects.">
+	<meta name="viewport" content="width=device-width">
 
-  <link rel="stylesheet" href="/static/css/normalize.css">
-  <link rel="stylesheet" href="/static/css/style.css">
-  <link rel="stylesheet" href="/static/css/print.css">
+	<link rel="stylesheet" href="/static/css/normalize.css">
+	<link rel="stylesheet" href="/static/css/style.css">
+	<link rel="stylesheet" href="/static/css/print.css">
+	<link rel="stylesheet" href="/static/css/highlight/dark.css">
+
+	<script type="text/javascript" src="/static/js/highlight.pack.js"></script>
+	<script type="text/javascript">
+		hljs.initHighlightingOnLoad();
+	</script>
 </head>
 <body>
-  <div id="container"><div id="container2">
-  <header>
-		<h1>Andrew Gallant's Blog {{if .Title}} :: {{.Title}} {{end}}</h1>
-    <hr>
-  </header>
-  <div id="content-cont">
-    <div id="content" role="main">
+	<div id="container"><div id="container2">
+	<header>
+		<h1>Andrew Gallant's Blog</h1>
+		<ul>
+			<li><a href="/">Blog Home</a></li>
+			<li><a href="/about">About</a></li>
+			<li><a href="/archives">Archives</a></li>
+			<li><a href="http://burntsushi.net">Homepage</a></li>
+		</ul>
+		<hr>
+	</header>
+	<div id="content" role="main">
 {{end}}
 

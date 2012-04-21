@@ -3,11 +3,12 @@ html {
 }
 
 body {
-  background: #cbccd3;
+  /* background: #cbccd3; */
+  background: #444444;
   height: 100%;
 }
 
-a {
+a, a:visited {
   color: #4578AB;
   font-weight: bold;
 }
@@ -17,7 +18,7 @@ a:hover {
 }
 
 div#container {
-  width: 900px;
+  width: 800px;
   min-height: 100%;
   margin: 0 auto;
   background: #fff;
@@ -27,36 +28,8 @@ div#container2 {
   padding: 10px 30px;
 }
 
-div#content-cont {
-  /* background: blue; */
-  clear: both;
-}
-
-div#nav {
-  float: left;
-  width: 173px;
-  margin: 0;
-  padding: 0 10px 0 0;
-  position: relative;
-  right: -1px;
-  height: 100%;
-  overflow: hidden;
-}
-
-  div#nav ul {
-    margin: 10px 0 0 0;
-    padding: 0;
-    list-style-type: none;
-  }
-
-    div#nav ul li {
-      margin-bottom: 5px;
-    }
-
 div#content {
-  float: right;
-  width: 640px;
-  padding: 5px 0 0 15px;
+	padding: 20px 0;
 }
 
 hr {
@@ -66,33 +39,21 @@ hr {
   margin: 0;
 }
 
-h1 {
-  margin: 0;
-  font-size: 200%;
-}
-
-h2 {
-  margin: 0;
-  font-size: 150%;
-}
-
-h3 {
-  font-size: 150%;
-  margin-top: 0;
-}
-
-h4 {
-  font-size: 130%;
-}
-
-h3, h4 {
-  margin-bottom: 0;
-}
-
 header {
   display: block;
   clear: both;
 }
+
+	header ul {
+		list-style-type: none;
+		margin: 5px 0 0 0;
+		padding: 0;
+	}
+
+		header ul li {
+			float: left;
+			margin: 0 40px 5px 0;
+		}
 
 footer {
   display: block;
@@ -103,6 +64,30 @@ footer {
 
 footer p {
   margin: 0;
+}
+
+h1 {
+  margin: 0;
+  font-size: 200%;
+}
+
+h2 {
+  margin: 0;
+	padding: 0;
+	line-height: 1em;
+  font-size: 150%;
+	/* border: 1px solid #000; */
+}
+
+h3 {
+  font-size: 80%;
+  margin: 0 0 15px 0;
+	font-style: italic;
+	font-weight: normal;
+}
+
+h4 {
+  font-size: 130%;
 }
 
 .citation {
@@ -116,24 +101,15 @@ p {
 
 .code, code {
   font-family: monospace;
-  background: #f6f3f6;
+	font-size: 120%;
+  background: #444;
+	color: #fff;
   border: 1px solid #000;
   padding: 2px;
 }
 
-.code {
-  white-space: nowrap;
-}
-
-code {
-  display: block;
+pre code {
   padding: 0.5em;
-}
-
-code.command {
-  padding: 0.5em 0.5em 0.5em 7em;
-  text-indent: -6.5em;
-  line-height: 1.7em;
 }
 
 ul li ul {
