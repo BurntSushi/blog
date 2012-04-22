@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	posts Posts
+	posts       Posts
 	postsLocker = &sync.RWMutex{}
 )
 
@@ -33,10 +33,10 @@ func (ps Posts) Swap(i, j int) {
 }
 
 type Post struct {
-	Title string
-	Ident string
-	Created time.Time
-	Raw string
+	Title    string
+	Ident    string
+	Created  time.Time
+	Raw      string
 	Markdown template.HTML
 }
 
@@ -109,7 +109,7 @@ func refreshPosts() {
 		p.Markdown = template.HTML(blackfriday.MarkdownCommon([]byte(p.Raw)))
 
 		// Parse the date
-		created, err := time.Parse("2006-01-02-15-04", name[:len(name) - 3])
+		created, err := time.Parse("2006-01-02-15-04", name[:len(name)-3])
 		if err != nil {
 			log.Println(err)
 			log.Println("Skipping '%s'...", name)
@@ -126,4 +126,3 @@ func refreshPosts() {
 		fmt.Println(p)
 	}
 }
-

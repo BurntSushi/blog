@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	err  error
-	view *template.Template
+	err        error
+	view       *template.Template
 	viewLocker = &sync.RWMutex{}
 
 	viewFuncs = template.FuncMap{
@@ -102,10 +102,10 @@ func render(w http.ResponseWriter, template string, data interface{}) {
 func render404(w http.ResponseWriter, location string) {
 	render(w, "404",
 		struct {
-			Title string
+			Title    string
 			Location string
 		}{
-			Title: "Page not found",
+			Title:    "Page not found",
 			Location: location,
 		})
 }
