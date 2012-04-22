@@ -4,22 +4,28 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
-	"io"
 	"log"
 	"net/http"
 	"os"
+	"sync"
 
 	"code.google.com/p/gorilla/mux"
+
+	auth "github.com/abbot/go-http-auth"
 )
 
 var (
 	err  error
 	view *template.Template
+	viewLocker = &sync.RWMutex{}
 
 	viewFuncs = template.FuncMap{
 		"postFormatTime": postFormatTime,
 	}
 
+	htpasswd = flag.String("htpasswd",
+		"/home/andrew/www/burntsushi.net/.htpasswd",
+		"file path to '.htpasswd' file")
 	postPath = flag.String("post",
 		"/home/andrew/www/burntsushi.net/blog/posts",
 		"path to 'posts' directory")
@@ -35,48 +41,66 @@ func init() {
 	flag.Parse()
 
 	// Make sure our view/static directories are readable.
-	checkDir := func(p string) {
+	checkExists := func(p string) {
 		_, err = os.Open(p)
 		if err != nil {
 			log.Fatalf("%s", err)
 		}
 	}
-	checkDir(*postPath)
-	checkDir(*viewPath)
-	checkDir(*staticPath)
+	checkExists(*htpasswd)
+	checkExists(*postPath)
+	checkExists(*viewPath)
+	checkExists(*staticPath)
 
-	refreshData()
+	refreshViews()
+	refreshPosts()
 }
 
 func main() {
 	r := mux.NewRouter()
-	r.HandleFunc("/refresh", showRefresh) // dev only!
 	r.HandleFunc("/", showIndex)
 	r.HandleFunc("/about", showAbout)
 	r.HandleFunc("/archives", showArchives)
 	r.PathPrefix("/static").
 		Handler(http.StripPrefix("/static",
 		http.FileServer(http.Dir(*staticPath))))
+
+	// Password protect data refreshing
+	authenticator := auth.BasicAuthenticator(
+		"Refresh data", auth.HtpasswdFileProvider(*htpasswd))
+	r.HandleFunc("/refresh", authenticator(showRefresh))
+
+	// This must be last. Catches and handles anything else as a blog entry.
 	r.HandleFunc("/{postname}", showPost)
 
 	http.Handle("/", r)
 	http.ListenAndServe(":8081", nil)
 }
 
-func refreshData() {
+func refreshViews() {
+	viewLocker.Lock()
+	defer viewLocker.Unlock()
+
 	// re-parse all the templates
 	view, err = template.New("view").Funcs(viewFuncs).
 		ParseGlob(*viewPath + "/*.html")
 	if err != nil {
 		panic(err)
 	}
-
-	// now re-load all of the blog entries
-	refreshPosts()
 }
 
-func render404(w io.Writer, location string) {
-	err := view.ExecuteTemplate(w, "404",
+func render(w http.ResponseWriter, template string, data interface{}) {
+	viewLocker.RLock()
+	defer viewLocker.RUnlock()
+
+	err := view.ExecuteTemplate(w, template, data)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func render404(w http.ResponseWriter, location string) {
+	render(w, "404",
 		struct {
 			Title string
 			Location string
@@ -84,17 +108,18 @@ func render404(w io.Writer, location string) {
 			Title: "Page not found",
 			Location: location,
 		})
-	if err != nil {
-		panic(err)
-	}
 }
 
-func showRefresh(w http.ResponseWriter, req *http.Request) {
-	refreshData()
+func showRefresh(w http.ResponseWriter, req *auth.AuthenticatedRequest) {
+	refreshViews()
+	refreshPosts()
 	fmt.Fprintln(w, "Data refreshed!")
 }
 
 func showPost(w http.ResponseWriter, req *http.Request) {
+	postsLocker.RLock()
+	defer postsLocker.RUnlock()
+
 	vars := mux.Vars(req)
 	post := findPost(vars["postname"])
 	if post == nil {
@@ -103,14 +128,14 @@ func showPost(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err := view.ExecuteTemplate(w, "post", post)
-	if err != nil {
-		panic(err)
-	}
+	render(w, "post", post)
 }
 
 func showIndex(w http.ResponseWriter, req *http.Request) {
-	err := view.ExecuteTemplate(w, "index",
+	postsLocker.RLock()
+	defer postsLocker.RUnlock()
+
+	render(w, "index",
 		struct {
 			Title string
 			Posts Posts
@@ -118,31 +143,22 @@ func showIndex(w http.ResponseWriter, req *http.Request) {
 			Title: "",
 			Posts: posts,
 		})
-	if err != nil {
-		panic(err)
-	}
 }
 
 func showAbout(w http.ResponseWriter, req *http.Request) {
-	err := view.ExecuteTemplate(w, "about",
+	render(w, "about",
 		struct {
 			Title string
 		}{
 			Title: "About",
 		})
-	if err != nil {
-		panic(err)
-	}
 }
 
 func showArchives(w http.ResponseWriter, req *http.Request) {
-	err := view.ExecuteTemplate(w, "archive",
+	render(w, "archive",
 		struct {
 			Title string
 		}{
 			Title: "Blog Archives",
 		})
-	if err != nil {
-		panic(err)
-	}
 }

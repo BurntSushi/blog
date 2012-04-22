@@ -7,6 +7,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/russross/blackfriday"
@@ -14,6 +15,7 @@ import (
 
 var (
 	posts Posts
+	postsLocker = &sync.RWMutex{}
 )
 
 type Posts []*Post
@@ -57,6 +59,9 @@ func findPost(ident string) *Post {
 }
 
 func refreshPosts() {
+	postsLocker.Lock()
+	defer postsLocker.Unlock()
+
 	files, err := ioutil.ReadDir(*postPath)
 	if err != nil {
 		log.Fatal(err)
