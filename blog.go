@@ -155,10 +155,15 @@ func showAbout(w http.ResponseWriter, req *http.Request) {
 }
 
 func showArchives(w http.ResponseWriter, req *http.Request) {
+	postsLocker.RLock()
+	defer postsLocker.RUnlock()
+
 	render(w, "archive",
 		struct {
 			Title string
+			Posts Posts
 		}{
-			Title: "Blog Archives",
+			Title: "",
+			Posts: posts,
 		})
 }
