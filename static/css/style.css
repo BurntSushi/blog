@@ -18,7 +18,7 @@ a:hover {
 }
 
 div#container {
-  width: 800px;
+  width: 900px;
   min-height: 100%;
   margin: 0 auto;
   background: #fff;
@@ -29,7 +29,7 @@ div#container2 {
 }
 
 div#content {
-	padding: 20px 0;
+  padding: 0 0 20px 0;
 }
 
 hr {
@@ -44,16 +44,16 @@ header {
   clear: both;
 }
 
-	header ul {
-		list-style-type: none;
-		margin: 5px 0 0 0;
-		padding: 0;
-	}
+  header ul {
+    list-style-type: none;
+    margin: 5px 0 0 0;
+    padding: 0;
+  }
 
-		header ul li {
-			float: left;
-			margin: 0 40px 5px 0;
-		}
+    header ul li {
+      float: left;
+      margin: 0 40px 5px 0;
+    }
 
 footer {
   display: block;
@@ -73,21 +73,22 @@ h1 {
 
 h2 {
   margin: 0;
-	padding: 0;
-	line-height: 1em;
+  padding: 20px 0 0 0;
+  line-height: 1em;
   font-size: 150%;
-	/* border: 1px solid #000; */
+  /* border: 1px solid #000; */
 }
 
 h3 {
-  font-size: 80%;
-  margin: 0 0 15px 0;
-	font-style: italic;
-	font-weight: normal;
+  font-size: 130%;
+  margin-bottom: 0;
 }
 
 h4 {
-  font-size: 130%;
+  font-size: 80%;
+  margin: 0 0 15px 0;
+  font-style: italic;
+  font-weight: normal;
 }
 
 .citation {
@@ -97,13 +98,15 @@ h4 {
 p {
   margin-top: 0;
   line-height: 1.6em;
+  text-align: justify;
+  font-size: 110%;
 }
 
 .code, code {
   font-family: monospace;
-	font-size: 120%;
+  font-size: 120%;
   background: #444;
-	color: #fff;
+  color: #fff;
   border: 1px solid #000;
   padding: 2px;
 }

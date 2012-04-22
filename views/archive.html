@@ -1,9 +1,13 @@
 {{ define "archive" }}
 {{ template "header" . }}
 
-<h2>Blog Archives</h2>
-
-<p>raise NotImplemented</p>
+<h2>List of all Blog Posts</h2>
+<dl>
+	{{ range .Posts }}
+		<dt>Posted on {{ .Created | postFormatTime }}</dt>
+		<dd><a href="/{{ .Ident }}">{{ .Title }}</a></dd>
+	{{ end }}
+</dl>
 
 {{ template "footer" . }}
 {{ end }}

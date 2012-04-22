@@ -6,6 +6,6 @@
 
 {{ define "postbit" }}
 <h2><a href="/{{ .Ident }}">{{ .Title }}</a></h2>
-<h3>Posted on {{ .Created | postFormatTime }}</h3>
+<h4>Posted on {{ .Created | postFormatTime }}</h4>
 {{ .Markdown }}
 {{ end }}
