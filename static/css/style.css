@@ -103,7 +103,7 @@ p {
 }
 
 .code, code {
-  font-family: monospace;
+  font-family: "DejaVu Sans Mono", monospace;
   font-size: 120%;
   background: #444;
   color: #fff;
