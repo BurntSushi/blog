@@ -142,12 +142,7 @@ func (p *Post) addComment(author, email, comment string) error {
 
 		mailer := exec.Command("mailx", "-t")
 		mailer.Stdin = buf
-		bts, err := mailer.CombinedOutput()
-		if err != nil {
-			logger.Printf("Error running 'mailx' command: %s", err)
-		} else if len(bts) > 0 {
-			logger.Printf("'mailx' command output: %s", bts)
-		}
+		bts, err := mailer.Start()
 	}
 
 	logger.Printf("Added new comment by '%s' for post '%s'.", author, p)
