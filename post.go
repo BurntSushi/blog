@@ -17,6 +17,13 @@ var (
 	postsLocker = &sync.RWMutex{}
 )
 
+func PostsGet() Posts {
+	postsLocker.RLock()
+	defer postsLocker.RUnlock()
+
+	return posts
+}
+
 type Posts []*Post
 
 func (ps Posts) Len() int {
@@ -40,6 +47,7 @@ type Post struct {
 
 	comments       Comments
 	commentsLocker *sync.RWMutex
+	addCommentLocker *sync.Mutex
 }
 
 func newPost(fileName string) (*Post, error) {
@@ -83,15 +91,14 @@ func newPost(fileName string) (*Post, error) {
 	}
 	p.Created = created
 
-	// Setup the comments locker
+	// Setup the comments lockers
 	p.commentsLocker = &sync.RWMutex{}
+	p.addCommentLocker = &sync.Mutex{}
 
 	// Now load the comments!
 	// (This always succeeds. If there are any errors with individual comments,
 	//  they are simply omitted from the resulting list.)
-	p.commentsLocker.Lock()
 	p.loadComments()
-	p.commentsLocker.Unlock()
 
 	return p, nil
 }
@@ -101,12 +108,7 @@ func (p *Post) CommentsGet() Comments {
 	p.commentsLocker.RLock()
 	defer p.commentsLocker.RUnlock()
 
-	comments := make(Comments, len(p.comments))
-	for i := range p.comments {
-		copied := *(p.comments[i])
-		comments[i] = &copied
-	}
-	return comments
+	return p.comments
 }
 
 func (p *Post) String() string {
@@ -115,7 +117,7 @@ func (p *Post) String() string {
 }
 
 func findPost(ident string) *Post {
-	for _, post := range posts {
+	for _, post := range PostsGet() {
 		if strings.ToLower(ident) == strings.ToLower(post.Ident) {
 			return post
 		}
@@ -124,15 +126,12 @@ func findPost(ident string) *Post {
 }
 
 func refreshPosts() {
-	postsLocker.Lock()
-	defer postsLocker.Unlock()
-
 	files, err := ioutil.ReadDir(postPath)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	posts = make(Posts, 0, len(files))
+	newPosts := make(Posts, 0, len(files))
 	for _, file := range files {
 		if !strings.HasSuffix(file.Name(), ".md") {
 			continue
@@ -141,11 +140,15 @@ func refreshPosts() {
 		logger.Printf("Trying to update '%s'...", file.Name())
 		if p, err := newPost(file.Name()); err == nil {
 			logger.Printf("Updated '%s' successfully.", p)
-			posts = append(posts, p)
+			newPosts = append(newPosts, p)
 		} else {
 			logger.Println(err)
 			logger.Printf("Could not update '%s'. Skipping...", file.Name())
 		}
 	}
-	sort.Sort(posts)
+	sort.Sort(newPosts)
+
+	postsLocker.Lock()
+	posts = newPosts
+	postsLocker.Unlock()
 }

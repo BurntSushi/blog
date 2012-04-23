@@ -11,6 +11,7 @@
 <a href="/{{ .Ident }}#comments">
   {{ $numComments }}
   {{ "Comment" | pluralize $numComments }}
+- <a href="/{{ .Ident}}#post-comment">Post comment</a>
 </a>
 {{ end }}
 
@@ -48,14 +49,16 @@
      is allowed in your comment.</p>
   <textarea name="comment" tabindex="3">{{ .FormComment }}</textarea>
 
-  <div>
-    <p><img src="/captcha/{{ .FormCaptchaId }}.png" id="captcha"
-            alt="Captcha image"></p>
-    <p><a href="javascript:reloadCaptcha();">Reload</a></p>
-    <input type="text" name="captcha" value="" tabindex="4">
-    <input type="hidden" name="captchaid" value="{{ .FormCaptchaId }}">
-  </div>
+  <p><label for="captchaInput">
+       <img src="/captcha/{{ .FormCaptchaId }}.png" id="captcha"
+            alt="Captcha image">
+  </label></p>
+  <p><a href="javascript:reloadCaptcha();">
+      I can't read the CAPTCHA image.</a></p>
+  <p>Please verify your humanity:</p>
+  <input type="text" name="captcha" id="captchaInput" value="" tabindex="4">
 
+  <input type="hidden" name="captchaid" value="{{ .FormCaptchaId }}">
   <input type="submit" tabindex="5">
 </form>
 

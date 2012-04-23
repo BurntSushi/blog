@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	txtTemplate "text/template"
 
 	"code.google.com/p/gorilla/mux"
@@ -46,6 +47,9 @@ var (
 )
 
 func init() {
+	// let my people go!
+	syscall.Umask(0)
+
 	flag.Parse()
 
 	postPath = *cwd + "/posts"
@@ -136,7 +140,7 @@ func refreshViews() {
 func forceValidPost(w http.ResponseWriter, postIdent string) *Post {
 	post := findPost(postIdent)
 	if post == nil {
-		logger.Println("Could not find post with identifier '%s'.", postIdent)
+		logger.Printf("Could not find post with identifier '%s'.", postIdent)
 		render404(w, fmt.Sprintf(
 			"Blog post with identifier '%s'.", postIdent))
 		return nil
@@ -193,9 +197,6 @@ func showRefresh(w http.ResponseWriter, req *auth.AuthenticatedRequest) {
 }
 
 func showPost(w http.ResponseWriter, req *http.Request) {
-	postsLocker.RLock()
-	defer postsLocker.RUnlock()
-
 	vars := mux.Vars(req)
 	post := forceValidPost(w, vars["postname"])
 	if post == nil {
@@ -206,9 +207,6 @@ func showPost(w http.ResponseWriter, req *http.Request) {
 }
 
 func addComment(w http.ResponseWriter, req *http.Request) {
-	postsLocker.RLock()
-	defer postsLocker.RUnlock()
-
 	vars := mux.Vars(req)
 	post := forceValidPost(w, vars["postname"])
 	if post == nil {
@@ -230,33 +228,31 @@ func addComment(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// We need to make sure only one comment per post can be added at a time.
+	// Namely, we need unique sequential identifiers for each comment.
+	post.addCommentLocker.Lock()
+	defer post.addCommentLocker.Unlock()
+
 	// Add the comment and refresh the comment store for this post.
 	// 'addComment' makes sure the input is valid and reports an
 	// error otherwise.
-	post.commentsLocker.Lock()
-
 	err := post.addComment(author, email, comment)
 	if err == nil { // success!
 		post.loadComments()
-		post.commentsLocker.Unlock()
 		http.Redirect(w, req, "/"+post.Ident+"#comments", http.StatusFound)
 	} else { // failure... :-(
-		post.commentsLocker.Unlock()
 		renderPost(w, post, err.Error(), author, email, comment)
 	}
 }
 
 func showIndex(w http.ResponseWriter, req *http.Request) {
-	postsLocker.RLock()
-	defer postsLocker.RUnlock()
-
 	render(w, "index",
 		struct {
 			Title string
 			Posts Posts
 		}{
 			Title: "",
-			Posts: posts,
+			Posts: PostsGet(),
 		})
 }
 
@@ -270,15 +266,12 @@ func showAbout(w http.ResponseWriter, req *http.Request) {
 }
 
 func showArchives(w http.ResponseWriter, req *http.Request) {
-	postsLocker.RLock()
-	defer postsLocker.RUnlock()
-
 	render(w, "archive",
 		struct {
 			Title string
 			Posts Posts
 		}{
 			Title: "",
-			Posts: posts,
+			Posts: PostsGet(),
 		})
 }

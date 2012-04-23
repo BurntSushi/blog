@@ -179,3 +179,8 @@ form {
     font-size: 90%;
   }
 
+  form input[type="submit"] {
+    margin-top: 10px;
+    display: block;
+  }
+

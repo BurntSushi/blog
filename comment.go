@@ -73,8 +73,7 @@ func (c *Comment) String() string {
 
 // addComment takes an author, email (possibly empty) and a comment and writes
 // it to disk. It also checks for malformed input and errors out if anything
-// is goofy. A call to addComment should always be wrapped in a commentLocker
-// write lock.
+// is goofy.
 func (p *Post) addComment(author, email, comment string) error {
 	author = strings.TrimSpace(author)
 	email = strings.TrimSpace(email)
@@ -95,7 +94,8 @@ func (p *Post) addComment(author, email, comment string) error {
 
 	// Data is valid as far as we know.
 	// Use the number of comments (+1) as a unique file name.
-	fileName := fmt.Sprintf("%s/%s/%d", commentPath, p.Ident, len(p.comments)+1)
+	fileName := fmt.Sprintf("%s/%s/%d", commentPath, p.Ident,
+		len(p.CommentsGet())+1)
 
 	// Build the lines of the file.
 	created := time.Now()
@@ -110,7 +110,7 @@ func (p *Post) addComment(author, email, comment string) error {
 	// Now write the file.
 	err := ioutil.WriteFile(fileName, []byte(strings.Join(lines, "\n")), 0660)
 	if err != nil {
-		logger.Println("There was an error adding a comment: %s", err)
+		logger.Printf("There was an error adding a comment: %s", err)
 		return fmt.Errorf("An unknown error occurred when trying to " +
 			"submit your comment. Please contact admin@burntsushi.net to " +
 			"report a bug in saving new comments.")
@@ -136,43 +136,56 @@ func (p *Post) addComment(author, email, comment string) error {
 				},
 			})
 		if err != nil {
-			logger.Println("Problem executing email template: %s", err)
+			logger.Printf("Problem executing email template: %s", err)
 			continue
 		}
 
 		mailer := exec.Command("mailx", "-t")
 		mailer.Stdin = buf
-		mailer.Run()
-		// bts, err := mailer.CombinedOutput() 
-		// if err != nil { 
-			// fmt.Println(err) 
-		// } else { 
-			// fmt.Println(bts) 
-		// } 
+		bts, err := mailer.CombinedOutput()
+		if err != nil {
+			logger.Printf("Error running 'mailx' command: %s", err)
+		} else if len(bts) > 0 {
+			logger.Printf("'mailx' command output: %s", bts)
+		}
 	}
+
+	logger.Printf("Added new comment by '%s' for post '%s'.", author, p)
 
 	// Finally done.
 	return nil
 }
 
 // loadComments reads the comments for a particular post from disk and caches
-// them. A call to loadComments should always be wrapped in a commentLocker
-// write lock.
+// them. 
 func (p *Post) loadComments() {
 	comments := make(Comments, 0)
-	defer func() {
-		p.comments = comments
-		sort.Sort(p.comments)
-	}()
 
 	files, err := ioutil.ReadDir(commentPath + "/" + p.Ident)
 	if err != nil {
 		if os.IsNotExist(err) {
-			os.Mkdir(commentPath+"/"+p.Ident, 0660)
+			dirName := commentPath + "/" + p.Ident
+
+			err = os.Mkdir(dirName, os.ModeDir | 0770)
+			if err != nil {
+				logger.Printf("Could not create directory '%s': %s",
+					dirName, err)
+				return
+			}
+
+			// I'm not exactly sure why the above Mkdir's permissions don't
+			// stick. It might be because of my umask. That's inconvenient.
+			// err = os.Chmod(dirName, os.ModeDir | 0770) 
+			// if err != nil { 
+				// logger.Printf("Could not set permissions on '%s': %s", 
+					// dirName, err) 
+				// return 
+			// } 
+
 			files, err = ioutil.ReadDir(commentPath + "/" + p.Ident)
 		}
 		if err != nil {
-			logger.Println("Could not access comment directory for post: %s", p)
+			logger.Printf("Could not access comment directory for post: %s", p)
 			return
 		}
 	}
@@ -183,8 +196,13 @@ func (p *Post) loadComments() {
 			comments = append(comments, c)
 		} else {
 			logger.Printf("\t%s", err)
-			logger.Println("\tCould not load comment '%s'. Skipping...",
+			logger.Printf("\tCould not load comment '%s'. Skipping...",
 				file.Name())
 		}
 	}
+	sort.Sort(comments)
+
+	p.commentsLocker.Lock()
+	p.comments = comments
+	p.commentsLocker.Unlock()
 }
