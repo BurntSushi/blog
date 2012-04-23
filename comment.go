@@ -1,13 +1,23 @@
 package main
 
+/*
+	comment.go contains methods and functions related to the processing of
+	comments. 
+
+	Such processing includes adding comments, sanitizing user input,
+	validating user input, reading comments from disk and caching comments
+	in memory.
+
+	Most of the methods here are defined with a *Post receiver, but they
+	are specifically related to processing comments of a particular *Post.
+*/
+
 import (
-	"bytes"
 	"fmt"
 	"html"
 	"html/template"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,6 +26,7 @@ import (
 	"github.com/russross/blackfriday"
 )
 
+// Comments exists to implement sort.Interface
 type Comments []*Comment
 
 func (cs Comments) Len() int {
@@ -30,6 +41,8 @@ func (cs Comments) Swap(i, j int) {
 	cs[i], cs[j] = cs[j], cs[i]
 }
 
+// Comment stores all information related to a comment.
+// 'Markdown' is the HTML version of the comment.
 type Comment struct {
 	Name     string
 	Email    string
@@ -67,33 +80,26 @@ func newComment(postIdent, fileName string) (*Comment, error) {
 	return c, nil
 }
 
+// String is a string representation of a comment: its author and timestamp.
 func (c *Comment) String() string {
 	return fmt.Sprintf("%s (%s)", c.Name, formatTime(c.Created))
 }
 
 // addComment takes an author, email (possibly empty) and a comment and writes
-// it to disk. It also checks for malformed input and errors out if anything
+// it to disk. It also checks for malformed input and errors if anything
 // is goofy.
 func (p *Post) addComment(author, email, comment string) error {
 	author = strings.TrimSpace(author)
 	email = strings.TrimSpace(email)
 	comment = strings.TrimSpace(comment)
 
-	if len(author) == 0 {
-		return fmt.Errorf("Please provide a name.")
-	}
-	if len(comment) == 0 {
-		return fmt.Errorf("Please submit a comment.")
-	}
-	if strings.Index(author, "\n") != -1 {
-		return fmt.Errorf("Please do not put new lines in your name.")
-	}
-	if strings.Index(email, "\n") != -1 {
-		return fmt.Errorf("Please do not put new lines in your email.")
+	if err := validateComment(author, email, comment); err != nil {
+		return err
 	}
 
 	// Data is valid as far as we know.
 	// Use the number of comments (+1) as a unique file name.
+	// We can do this because we're inside an addCommentLocker for this entry.
 	fileName := fmt.Sprintf("%s/%s/%d", commentPath, p.Ident,
 		len(p.CommentsGet())+1)
 
@@ -117,77 +123,31 @@ func (p *Post) addComment(author, email, comment string) error {
 	}
 
 	// Do some email notifications!
-	for _, notifyEmail := range []string{"jamslam@gmail.com"} {
-
-		buf := bytes.NewBuffer([]byte{})
-		err = eview.ExecuteTemplate(buf, "comment-email",
-			struct {
-				To      string
-				Post    *Post
-				Comment *Comment
-			}{
-				To:   notifyEmail,
-				Post: p,
-				Comment: &Comment{
-					Name:     author,
-					Email:    email,
-					Created:  created,
-					Markdown: template.HTML(comment),
-				},
-			})
-		if err != nil {
-			logger.Printf("Problem executing email template: %s", err)
-			continue
-		}
-
-		mailer := exec.Command("mailx", "-t")
-		mailer.Stdin = buf
-		err := mailer.Start()
-		if err != nil {
-			logger.Printf("Could not run 'mailx' because: %s", err)
-		}
-	}
+	p.notify(&Comment{
+		Name:     author,
+		Email:    email,
+		Created:  created,
+		Markdown: template.HTML(comment),
+	})
 
 	logger.Printf("Added new comment by '%s' for post '%s'.", author, p)
-
-	// Finally done.
 	return nil
 }
 
 // loadComments reads the comments for a particular post from disk and caches
-// them. 
+// them. They are also sorted.
+// 'loadCommentsLocker' is needed to make sure two instances of 'loadComments'
+// don't run in parallel.
 func (p *Post) loadComments() {
-	comments := make(Comments, 0)
+	p.loadCommentsLocker.Lock()
+	defer p.loadCommentsLocker.Unlock()
 
-	files, err := ioutil.ReadDir(commentPath + "/" + p.Ident)
-	if err != nil {
-		if os.IsNotExist(err) {
-			dirName := commentPath + "/" + p.Ident
-
-			err = os.Mkdir(dirName, os.ModeDir | 0770)
-			if err != nil {
-				logger.Printf("Could not create directory '%s': %s",
-					dirName, err)
-				return
-			}
-
-			// I'm not exactly sure why the above Mkdir's permissions don't
-			// stick. It might be because of my umask. That's inconvenient.
-			// err = os.Chmod(dirName, os.ModeDir | 0770) 
-			// if err != nil { 
-				// logger.Printf("Could not set permissions on '%s': %s", 
-					// dirName, err) 
-				// return 
-			// } 
-
-			files, err = ioutil.ReadDir(commentPath + "/" + p.Ident)
-		}
-		if err != nil {
-			logger.Printf("Could not access comment directory for post: %s", p)
-			return
-		}
+	files := p.commentFiles()
+	if files == nil {
+		return
 	}
 
+	comments := make(Comments, 0)
 	for _, file := range files {
 		if c, err := newComment(p.Ident, file.Name()); err == nil {
 			logger.Printf("\tLoaded comment '%s' successfully.", c)
@@ -203,4 +163,63 @@ func (p *Post) loadComments() {
 	p.commentsLocker.Lock()
 	p.comments = comments
 	p.commentsLocker.Unlock()
+}
+
+// commentFiles returns a slice of comment files from disk for a particular
+// entry. If an entry's comment directory doesn't exist, it is created.
+func (p *Post) commentFiles() []os.FileInfo {
+	files, err := ioutil.ReadDir(commentPath + "/" + p.Ident)
+	if err != nil {
+		if os.IsNotExist(err) {
+			dirName := commentPath + "/" + p.Ident
+
+			err = os.Mkdir(dirName, os.ModeDir|0770)
+			if err != nil {
+				logger.Printf("Could not create directory '%s': %s",
+					dirName, err)
+				return nil
+			}
+
+			files, err = ioutil.ReadDir(commentPath + "/" + p.Ident)
+		}
+		if err != nil {
+			logger.Printf("Could not access comment directory for post: %s", p)
+			return nil
+		}
+	}
+	return files
+}
+
+// validateComment takes all user input associated with a comment and runs
+// a number of tests on it to make sure it's OK to accept.
+// The return value will be nil if the comment is valid.
+func validateComment(author, email, comment string) error {
+	if len(author) == 0 {
+		return fmt.Errorf("Please provide a name.")
+	}
+	if len(author) > 256 {
+		return fmt.Errorf(
+			"Please shorten your name to less than 256 characters.")
+	}
+	if len(email) > 256 {
+		return fmt.Errorf(
+			"Please shorten your email address to less than 256 characters.")
+	}
+	if len(comment) == 0 {
+		return fmt.Errorf("Please submit a comment.")
+	}
+	if len(comment) > 200000 {
+		return fmt.Errorf(
+			"There is a 200,000 character limit on comments. If you really " +
+				"need to post something longer, please separate your post " +
+				"into multiple comments. Sorry for the inconvenience.")
+	}
+	if strings.Index(author, "\n") != -1 {
+		return fmt.Errorf("Please do not put new lines in your name.")
+	}
+	if strings.Index(email, "\n") != -1 {
+		return fmt.Errorf("Please do not put new lines in your email.")
+	}
+
+	return nil
 }

@@ -20,15 +20,30 @@ import (
 )
 
 var (
-	err                                                  error
-	view                                                 *template.Template
-	eview                                                *txtTemplate.Template
-	logger                                               *log.Logger
-	postPath, commentPath, viewPath, staticPath, logPath string
+	// current working directory; a context for relative paths defined below
+	cwd = flag.String("cwd",
+		"/home/andrew/www/burntsushi.net/blog",
+		"path to blog directory that contains "+
+			"'posts', 'views', 'static' and 'log'")
 
-	viewLocker = &sync.RWMutex{}
+	// file for .htpasswd that protects /refresh. Keep it out of the repo!
+	htpasswd = flag.String("htpasswd",
+		"/home/andrew/www/burntsushi.net/.htpasswd",
+		"file path to '.htpasswd' file")
 
-	eviewFuncs = txtTemplate.FuncMap{
+	view   *template.Template    // html view templates
+	tview  *txtTemplate.Template // text view templates
+	logger *log.Logger           // custom logger for my blog
+
+	postPath    string // relative directory containing blog posts
+	commentPath string // relative directory containing comment directories
+	viewPath    string // relative directory contain HTML and TEXT templates
+	staticPath  string // relative directory containing all static files
+	logPath     string // relative directory containing any log output
+
+	viewLocker = &sync.RWMutex{} // keep views thread-safe when we update them
+
+	tviewFuncs = txtTemplate.FuncMap{
 		"formatTime": formatTime,
 		"pluralize":  pluralize,
 	}
@@ -36,22 +51,16 @@ var (
 		"formatTime": formatTime,
 		"pluralize":  pluralize,
 	}
-
-	htpasswd = flag.String("htpasswd",
-		"/home/andrew/www/burntsushi.net/.htpasswd",
-		"file path to '.htpasswd' file")
-	cwd = flag.String("cwd",
-		"/home/andrew/www/burntsushi.net/blog",
-		"path to blog directory that contains "+
-			"'posts', 'views', 'static' and 'log'")
 )
 
+// init checks the paths specified to make sure they are readable.
+// It also initializes the logger as soon as we can.
+// And finally caches the views, posts and comments currently on disk.
 func init() {
 	// let my people go!
 	syscall.Umask(0)
 
 	flag.Parse()
-
 	postPath = *cwd + "/posts"
 	commentPath = *cwd + "/comments"
 	viewPath = *cwd + "/views"
@@ -89,6 +98,7 @@ func init() {
 	refreshPosts()
 }
 
+// main sets up the routes (thanks Gorilla!).
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", showIndex)
@@ -116,38 +126,9 @@ func main() {
 	http.ListenAndServe(":8081", nil)
 }
 
-func refreshViews() {
-	viewLocker.Lock()
-	defer viewLocker.Unlock()
-
-	// re-parse all the templates
-	view, err = template.New("view").Funcs(viewFuncs).
-		ParseGlob(viewPath + "/*.html")
-	if err != nil {
-		panic(err)
-	}
-
-	eview, err = txtTemplate.New("view").Funcs(eviewFuncs).
-		ParseGlob(viewPath + "/*.txt")
-	if err != nil {
-		panic(err)
-	}
-}
-
-// forceValidPost takes a post identifier and finds the corresponding
-// post and returns it. If one cannot be found, a 404 page is rendered
-// and nil is returned.
-func forceValidPost(w http.ResponseWriter, postIdent string) *Post {
-	post := findPost(postIdent)
-	if post == nil {
-		logger.Printf("Could not find post with identifier '%s'.", postIdent)
-		render404(w, fmt.Sprintf(
-			"Blog post with identifier '%s'.", postIdent))
-		return nil
-	}
-	return post
-}
-
+// render is a single-point-of-truth for executing HTML templates.
+// It's particularly useful in that it encapsulates the viewLocker.
+// (i.e., we make sure we aren't reading a view while it's being updated.)
 func render(w http.ResponseWriter, template string, data interface{}) {
 	viewLocker.RLock()
 	defer viewLocker.RUnlock()
@@ -158,6 +139,8 @@ func render(w http.ResponseWriter, template string, data interface{}) {
 	}
 }
 
+// renderPost builds on 'render' but is specifically for showing a post's page.
+// Namely, it handles the population of the "add comment" form.
 func renderPost(w http.ResponseWriter, post *Post,
 	formError, formAuthor, formEmail, formComment string) {
 
@@ -179,6 +162,10 @@ func renderPost(w http.ResponseWriter, post *Post,
 		})
 }
 
+// render404 builds on 'render' but forces a special '404' template when
+// a particular page cannot be found.
+// Currently, this is only used when an valid post identifier is used in
+// the URL.
 func render404(w http.ResponseWriter, location string) {
 	render(w, "404",
 		struct {
@@ -190,12 +177,45 @@ func render404(w http.ResponseWriter, location string) {
 		})
 }
 
-func showRefresh(w http.ResponseWriter, req *auth.AuthenticatedRequest) {
-	refreshViews()
-	refreshPosts()
-	fmt.Fprintln(w, "Data refreshed!")
+// showIndex renders the index page.
+// It should also limit the number of posts displayed, but I don't have
+// that many yet.
+func showIndex(w http.ResponseWriter, req *http.Request) {
+	render(w, "index",
+		struct {
+			Title string
+			Posts Posts
+		}{
+			Title: "",
+			Posts: PostsGet(),
+		})
 }
 
+// showAbout renders the about page.
+func showAbout(w http.ResponseWriter, req *http.Request) {
+	render(w, "about",
+		struct {
+			Title string
+		}{
+			Title: "About",
+		})
+}
+
+// showArchives renders the blog archive page.
+// The archives page is currently a list of all blog posts and their timestamps.
+func showArchives(w http.ResponseWriter, req *http.Request) {
+	render(w, "archive",
+		struct {
+			Title string
+			Posts Posts
+		}{
+			Title: "",
+			Posts: PostsGet(),
+		})
+}
+
+// showPost finds a post with the corresponding ident matching "postname"
+// and displays it. If one cannot be found, a 404 error is shown.
 func showPost(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	post := forceValidPost(w, vars["postname"])
@@ -206,6 +226,14 @@ func showPost(w http.ResponseWriter, req *http.Request) {
 	renderPost(w, post, "", "", "", "")
 }
 
+// addComment responds to a POST request for adding a comment to a post
+// with an ident matching "postname". If such a post cannot be found,
+// a 404 page is shown.
+// Form data is trimmed and the CAPTCHA is verified before anything else.
+// Finally, we add the comment but make sure to wrap it in an addCommentLocker.
+// This makes it so only a single comment can be added at a time for one
+// particular entry. This allows us to rely on the existing cache to provide
+// a unique identifier as a comment file name. (i.e., an incrementing integer.)
 func addComment(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	post := forceValidPost(w, vars["postname"])
@@ -245,33 +273,48 @@ func addComment(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func showIndex(w http.ResponseWriter, req *http.Request) {
-	render(w, "index",
-		struct {
-			Title string
-			Posts Posts
-		}{
-			Title: "",
-			Posts: PostsGet(),
-		})
+// showRefresh completely reloads the view, post and comment caches from disk.
+// It prints a silly message in response.
+// Note that this page is password protected. (Thanks abbot!)
+func showRefresh(w http.ResponseWriter, req *auth.AuthenticatedRequest) {
+	refreshViews()
+	refreshPosts()
+	fmt.Fprintln(w, "Data refreshed!")
 }
 
-func showAbout(w http.ResponseWriter, req *http.Request) {
-	render(w, "about",
-		struct {
-			Title string
-		}{
-			Title: "About",
-		})
+// refreshViews reparses the template files in the views directory.
+// This is useful when we update some HTML and don't want to restart the server.
+// Aside from startup, these are only refreshed when '/refresh' is visited.
+func refreshViews() {
+	viewLocker.Lock()
+	defer viewLocker.Unlock()
+
+	var err error
+
+	// re-parse all the templates
+	view, err = template.New("view").Funcs(viewFuncs).
+		ParseGlob(viewPath + "/*.html")
+	if err != nil {
+		panic(err)
+	}
+
+	tview, err = txtTemplate.New("view").Funcs(tviewFuncs).
+		ParseGlob(viewPath + "/*.txt")
+	if err != nil {
+		panic(err)
+	}
 }
 
-func showArchives(w http.ResponseWriter, req *http.Request) {
-	render(w, "archive",
-		struct {
-			Title string
-			Posts Posts
-		}{
-			Title: "",
-			Posts: PostsGet(),
-		})
+// forceValidPost takes a post identifier and finds the corresponding
+// post and returns it. If one cannot be found, a 404 page is rendered
+// and nil is returned.
+func forceValidPost(w http.ResponseWriter, postIdent string) *Post {
+	post := findPost(postIdent)
+	if post == nil {
+		logger.Printf("Could not find post with identifier '%s'.", postIdent)
+		render404(w, fmt.Sprintf(
+			"Blog post with identifier '%s'.", postIdent))
+		return nil
+	}
+	return post
 }
