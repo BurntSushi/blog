@@ -166,11 +166,10 @@ func (p *Post) loadComments() {
 // commentFiles returns a slice of comment files from disk for a particular
 // entry. If an entry's comment directory doesn't exist, it is created.
 func (p *Post) commentFiles() []os.FileInfo {
-	files, err := ioutil.ReadDir(commentPath + "/" + p.Ident)
+	dirName := commentPath + "/" + p.Ident
+	files, err := ioutil.ReadDir(dirName)
 	if err != nil {
 		if os.IsNotExist(err) {
-			dirName := commentPath + "/" + p.Ident
-
 			err = os.Mkdir(dirName, os.ModeDir|0770)
 			if err != nil {
 				logger.Printf("Could not create directory '%s': %s",
@@ -178,7 +177,7 @@ func (p *Post) commentFiles() []os.FileInfo {
 				return nil
 			}
 
-			files, err = ioutil.ReadDir(commentPath + "/" + p.Ident)
+			files, err = ioutil.ReadDir(dirName)
 		}
 		if err != nil {
 			logger.Printf("Could not access comment directory for post: %s", p)
