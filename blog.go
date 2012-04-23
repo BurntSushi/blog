@@ -164,7 +164,7 @@ func renderPost(w http.ResponseWriter, post *Post,
 
 // render404 builds on 'render' but forces a special '404' template when
 // a particular page cannot be found.
-// Currently, this is only used when an valid post identifier is used in
+// Currently, this is only used when an invalid post identifier is used in
 // the URL.
 func render404(w http.ResponseWriter, location string) {
 	render(w, "404",

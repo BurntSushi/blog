@@ -28,6 +28,14 @@ func PostsGet() Posts {
 	return posts
 }
 
+// PostsSet centralizes writing of posts to the cache.
+func PostsSet(newPosts Posts) {
+	postsLocker.Lock()
+	defer postsLocker.Unlock()
+
+	posts = newPosts
+}
+
 // Posts implements sort.Interface to sort posts in descending order by time.
 type Posts []*Post
 
@@ -129,6 +137,14 @@ func (p *Post) CommentsGet() Comments {
 	return p.comments
 }
 
+// CommentsSet centralizes writing to a post's comment cache.
+func (p *Post) CommentsSet(newComments Comments) {
+	p.commentsLocker.Lock()
+	defer p.commentsLocker.Unlock()
+
+	p.comments = newComments
+}
+
 // notify takes a new comment and sends an email to all applicable parties.
 // I'm aware of net/smtp, but I have two problems:
 // 1) I couldn't figure out how to get it to work with GMail's smtp servers.
@@ -209,8 +225,5 @@ func refreshPosts() {
 		}
 	}
 	sort.Sort(newPosts)
-
-	postsLocker.Lock()
-	posts = newPosts
-	postsLocker.Unlock()
+	PostsSet(newPosts)
 }

@@ -160,9 +160,7 @@ func (p *Post) loadComments() {
 	}
 	sort.Sort(comments)
 
-	p.commentsLocker.Lock()
-	p.comments = comments
-	p.commentsLocker.Unlock()
+	p.CommentsSet(comments)
 }
 
 // commentFiles returns a slice of comment files from disk for a particular

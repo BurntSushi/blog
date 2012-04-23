@@ -128,6 +128,10 @@ dl {
     margin-bottom: 10px;
   }
 
+    dl dd p {
+      margin: 0;
+    }
+
 p.error {
   font-size: 140%;
   font-weight: bold;
