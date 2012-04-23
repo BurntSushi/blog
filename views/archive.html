@@ -4,7 +4,7 @@
 <h2>List of all Blog Posts</h2>
 <dl>
 	{{ range .Posts }}
-		<dt>Posted on {{ .Created | postFormatTime }}</dt>
+		<dt>Posted on {{ .Created | formatTime }}</dt>
 		<dd><a href="/{{ .Ident }}">{{ .Title }}</a></dd>
 	{{ end }}
 </dl>

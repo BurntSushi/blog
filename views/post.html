@@ -1,11 +1,71 @@
 {{ define "post" }}
 {{ template "header" . }}
 {{ template "postbit" . }}
+{{ template "postbit-comments" . }}
 {{ template "footer" . }}
+{{ end }}
+
+{{ define "postbit-index" }}
+{{ template "postbit" . }}
+{{ $numComments := .CommentsGet | len }}
+<a href="/{{ .Ident }}#comments">
+  {{ $numComments }}
+  {{ "Comment" | pluralize $numComments }}
+</a>
 {{ end }}
 
 {{ define "postbit" }}
 <h2><a href="/{{ .Ident }}">{{ .Title }}</a></h2>
-<h4>Posted on {{ .Created | postFormatTime }}</h4>
+<h4>Posted on {{ .Created | formatTime }}</h4>
 {{ .Markdown }}
+{{ end }}
+
+{{ define "postbit-comments" }}
+{{ $comments := .CommentsGet }}
+
+<h2 id="post-comment">Add a Comment</h2>
+<p>Some name is required, but your email address is
+   <strong>not required.</strong> If you provide an email address, we will
+   use it <strong>only</strong> to notify you of new comments on
+   <strong>this</strong> post.</p>
+
+{{ if .FormError }}
+  <p class="error">{{ .FormError }}</p>
+{{ end }}
+<form id="postComment" method="post" action="/{{ .Ident }}#post-comment">
+  <div>
+    <label for="author">Name:* </label>
+    <input type="text" name="author" value="{{ .FormAuthor }}" tabindex="1">
+  </div>
+  <!-- <div>
+    <label for="email">Email: </label>
+    <input type="text" name="email" value="{{ .FormEmail }}" tabindex="2">
+  </div> -->
+  <input type="hidden" name="email" value="">
+
+  <p><a href="https://github.com/russross/blackfriday">Markdown</a>
+     is allowed in your comment.</p>
+  <textarea name="comment" tabindex="3">{{ .FormComment }}</textarea>
+
+  <div>
+    <p><img src="/captcha/{{ .FormCaptchaId }}.png" id="captcha"
+            alt="Captcha image"></p>
+    <p><a href="javascript:reloadCaptcha();">Reload</a></p>
+    <input type="text" name="captcha" value="" tabindex="4">
+    <input type="hidden" name="captchaid" value="{{ .FormCaptchaId }}">
+  </div>
+
+  <input type="submit" tabindex="5">
+</form>
+
+{{ if $comments }}
+  <h2 id="comments">Comments</h2>
+  {{ range $comments }}
+    <h3>{{ .Name }}</h3>
+    <h4>Posted on {{ .Created | formatTime }}</h4>
+    {{ .Markdown }}
+  {{ end }}
+{{ else }}
+  <h2 id="comments">No comments</h2>
+{{ end }}
 {{ end }}
