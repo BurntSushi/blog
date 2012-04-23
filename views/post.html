@@ -8,10 +8,8 @@
 {{ define "postbit-index" }}
 {{ template "postbit" . }}
 {{ $numComments := .CommentsGet | len }}
-<a href="/{{ .Ident }}#comments">
-  {{ $numComments }}
-  {{ "Comment" | pluralize $numComments }}
-</a>
+<a href="/{{ .Ident }}#comments">{{ $numComments }}
+  {{ "Comment" | pluralize $numComments }}</a>
 - <a href="/{{ .Ident}}#post-comment">Post comment</a>
 {{ end }}
 
