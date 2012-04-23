@@ -1,6 +1,26 @@
 This is a very simple blog application for my homepage. It is my first
 web application with Go.
 
+In includes usage of HTTP basic authentication with abbot's 'go-http-auth'
+package, CAPTCHA with dchest's 'captcha' package, URL routing with
+gorilla's 'mux' package and Markdown parsing with russross' 'blackfriday'
+package.
+
+The basic approach here is to keep cached copies of all views, blog posts
+and comments and update them as new ones are added. Namely, when new comments
+are added, the comment cache for that post is updated. The views and blog posts
+caches can be updated by visiting blog.burntsushi.net/refresh. (Of course, a 
+user name and password are required; you didn't take me for an idiot, now did 
+you? :P)
+
+There is also an example of piping a text templates output into the standard 
+input of the 'mailx' program (so that I get email notifications whenever a new 
+comment is posted). Go's Reader/Writer interfaces made this stupidly simple.
+
+It bares mentioning that the sync package's RWMutex and Mutex types 
+keep everything thread safe. goroutines and channels didn't seem to fit with 
+the 'many readers OR a single writer' model.
+
 Many thanks to manveru, whose own blog application greatly inspired mine:
 https://github.com/manveru/manveru.name
 
