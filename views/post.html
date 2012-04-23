@@ -11,8 +11,8 @@
 <a href="/{{ .Ident }}#comments">
   {{ $numComments }}
   {{ "Comment" | pluralize $numComments }}
-- <a href="/{{ .Ident}}#post-comment">Post comment</a>
 </a>
+- <a href="/{{ .Ident}}#post-comment">Post comment</a>
 {{ end }}
 
 {{ define "postbit" }}
