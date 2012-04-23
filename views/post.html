@@ -24,18 +24,19 @@
 {{ $comments := .CommentsGet }}
 
 <h2 id="post-comment">Add a Comment</h2>
-<p>Some name is required, but your email address is
+<!-- <p>Some name is required, but your email address is
    <strong>not required.</strong> If you provide an email address, we will
    use it <strong>only</strong> to notify you of new comments on
-   <strong>this</strong> post.</p>
+   <strong>this</strong> post.</p> -->
 
 {{ if .FormError }}
   <p class="error">{{ .FormError }}</p>
 {{ end }}
 <form id="postComment" method="post" action="/{{ .Ident }}#post-comment">
   <div>
-    <label for="author">Name:* </label>
-    <input type="text" name="author" value="{{ .FormAuthor }}" tabindex="1">
+    <label for="author">Name: </label>
+    <input type="text" name="author" id="author"
+           value="{{ .FormAuthor }}" tabindex="1">
   </div>
   <!-- <div>
     <label for="email">Email: </label>
