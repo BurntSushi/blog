@@ -142,12 +142,13 @@ func (p *Post) addComment(author, email, comment string) error {
 
 		mailer := exec.Command("mailx", "-t")
 		mailer.Stdin = buf
-		bts, err := mailer.CombinedOutput()
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			fmt.Println(bts)
-		}
+		mailer.Run()
+		// bts, err := mailer.CombinedOutput() 
+		// if err != nil { 
+			// fmt.Println(err) 
+		// } else { 
+			// fmt.Println(bts) 
+		// } 
 	}
 
 	// Finally done.
