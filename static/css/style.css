@@ -132,6 +132,10 @@ dl {
       margin: 0;
     }
 
+blockquote {
+  border-left: 2px solid #4578ab;
+}
+
 p.error {
   font-size: 140%;
   font-weight: bold;
