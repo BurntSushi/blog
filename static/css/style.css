@@ -134,6 +134,8 @@ dl {
 
 blockquote {
   border-left: 2px solid #4578ab;
+  margin-left: 0;
+  padding-left: 20px;
 }
 
 p.error {
