@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/russross/blackfriday"
+	"github.com/BurntSushi/blackfriday"
 )
 
 var (

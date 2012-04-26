@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/russross/blackfriday"
+	"github.com/BurntSushi/blackfriday"
 )
 
 // Comments exists to implement sort.Interface
@@ -75,7 +75,7 @@ func newComment(postIdent, fileName string) (*Comment, error) {
 
 	// Now parse the rest of the lines as markdown
 	body := strings.Join(lines[3:], "\n")
-	c.Markdown = template.HTML(blackfriday.MarkdownCommon([]byte(body)))
+	c.Markdown = template.HTML(markdownCommonUnsafe([]byte(body)))
 
 	return c, nil
 }
@@ -219,4 +219,30 @@ func validateComment(author, email, comment string) error {
 	}
 
 	return nil
+}
+
+// markdownCommonUnsafe is equivalent to blackfriday.MarkdownCommon,
+// except that is disables HTML escaping. This is useful because we have
+// already sanitized comment data. We do *not* use this for our blog posts,
+// because we trust ourselves!
+func markdownCommonUnsafe(input []byte) []byte {
+	// set up the HTML renderer
+	htmlFlags := 0
+	htmlFlags |= blackfriday.HTML_USE_XHTML
+	htmlFlags |= blackfriday.HTML_USE_SMARTYPANTS
+	htmlFlags |= blackfriday.HTML_SMARTYPANTS_FRACTIONS
+	htmlFlags |= blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
+	htmlFlags |= blackfriday.HTML_SKIP_ESCAPE
+	renderer := blackfriday.HtmlRenderer(htmlFlags, "", "")
+
+	// set up the parser
+	extensions := 0
+	extensions |= blackfriday.EXTENSION_NO_INTRA_EMPHASIS
+	extensions |= blackfriday.EXTENSION_TABLES
+	extensions |= blackfriday.EXTENSION_FENCED_CODE
+	extensions |= blackfriday.EXTENSION_AUTOLINK
+	extensions |= blackfriday.EXTENSION_STRIKETHROUGH
+	extensions |= blackfriday.EXTENSION_SPACE_HEADERS
+
+	return blackfriday.Markdown(input, renderer, extensions)
 }
