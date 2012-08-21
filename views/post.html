@@ -23,10 +23,17 @@
 {{ $comments := .CommentsGet }}
 
 <h2 id="post-comment">Add a Comment</h2>
+<p>Until I have time to figure out how to stop spammers, I've disabled
+   comments. If you need to contact me (or have suggestions on how to fight
+   spammers), please use
+   <img src="http://burntsushi.net/images/gmail.png" alt="My email address" />.
+   </p>
 <!-- <p>Some name is required, but your email address is
    <strong>not required.</strong> If you provide an email address, we will
    use it <strong>only</strong> to notify you of new comments on
    <strong>this</strong> post.</p> -->
+
+<!--
 
 {{ if .FormError }}
   <p class="error">{{ .FormError }}</p>
@@ -37,10 +44,10 @@
     <input type="text" name="author" id="author"
            value="{{ .FormAuthor }}" tabindex="1">
   </div>
-  <!-- <div>
-    <label for="email">Email: </label>
-    <input type="text" name="email" value="{{ .FormEmail }}" tabindex="2">
-  </div> -->
+  // <div>
+  //   <label for="email">Email: </label>
+  //   <input type="text" name="email" value="{{ .FormEmail }}" tabindex="2">
+  // </div>
   <input type="hidden" name="email" value="">
 
   <p><a href="https://github.com/russross/blackfriday">Markdown</a>
@@ -59,6 +66,8 @@
   <input type="hidden" name="captchaid" value="{{ .FormCaptchaId }}">
   <input type="submit" tabindex="5">
 </form>
+
+-->
 
 {{ if $comments }}
   <h2 id="comments">Comments</h2>
