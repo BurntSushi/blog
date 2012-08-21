@@ -235,6 +235,9 @@ func showPost(w http.ResponseWriter, req *http.Request) {
 // particular entry. This allows us to rely on the existing cache to provide
 // a unique identifier as a comment file name. (i.e., an incrementing integer.)
 func addComment(w http.ResponseWriter, req *http.Request) {
+	render404(w, "add comment")
+	return
+
 	vars := mux.Vars(req)
 	post := forceValidPost(w, vars["postname"])
 	if post == nil {
