@@ -36,43 +36,43 @@
 {{ if .FormError }}
   <p class="error">{{ .FormError }}</p>
 {{ end }}
-<!-- <form id="postComment" method="post" action="/{{ .Ident }}#post-comment"> -->
-  <!-- <div> -->
-    <!-- <label for="author">Name: </label> -->
-    <!-- <!-- <input type="text" name="author" id="author" disabled="disabled" --> -->
-           <!-- <!-- value="{{ .FormAuthor }}" tabindex="1"> --> -->
+<form id="postComment" method="post" action="/{{ .Ident }}#post-comment">
+  <div>
+    <label for="author">Name: </label>
+    <input type="text" name="author" id="author" disabled="disabled"
+           value="{{ .FormAuthor }}" tabindex="1">
     <!-- <input type="text" name="author" id="author" -->
            <!-- value="{{ .FormAuthor }}" tabindex="1"> -->
-  <!-- </div> -->
-  <!-- <!-- -->
-  <!-- <div> -->
-    <!-- <label for="email">Email: </label> -->
-    <!-- <input type="text" name="email" value="{{ .FormEmail }}" tabindex="2"> -->
-  <!-- </div> -->
-  <!-- --> -->
-  <!-- <input type="hidden" name="email" value=""> -->
-<!--  -->
-  <!-- <p><a href="https://github.com/russross/blackfriday">Markdown</a> -->
-     <!-- is allowed in your comment.</p> -->
-   <!-- <!-- <textarea name="comment" tabindex="3" --> -->
-             <!-- <!-- disabled="disabled">{{ .FormComment }}</textarea> --> -->
+  </div>
+  <!--
+  <div>
+    <label for="email">Email: </label>
+    <input type="text" name="email" value="{{ .FormEmail }}" tabindex="2">
+  </div>
+  -->
+  <input type="hidden" name="email" value="">
+
+  <p><a href="https://github.com/russross/blackfriday">Markdown</a>
+     is allowed in your comment.</p>
+   <textarea name="comment" tabindex="3"
+             disabled="disabled">{{ .FormComment }}</textarea>
    <!-- <textarea name="comment" tabindex="3">{{ .FormComment }}</textarea> -->
-<!--  -->
-  <!-- <p><label for="captchaInput"> -->
-       <!-- <img src="/captcha/{{ .FormCaptchaId }}.png" id="captcha" -->
-            <!-- alt="Captcha image"> -->
-  <!-- </label></p> -->
-  <!-- <p><a href="javascript:reloadCaptcha();"> -->
-      <!-- I can't read the CAPTCHA image.</a></p> -->
-  <!-- <p>Please verify your humanity:</p> -->
-  <!-- <!-- <input type="text" name="captcha" id="captchaInput" value="" tabindex="4" --> -->
-         <!-- <!-- disabled="disabled"> --> -->
+
+  <p><label for="captchaInput">
+       <img src="/captcha/{{ .FormCaptchaId }}.png" id="captcha"
+            alt="Captcha image">
+  </label></p>
+  <p><a href="javascript:reloadCaptcha();">
+      I can't read the CAPTCHA image.</a></p>
+  <p>Please verify your humanity:</p>
+  <input type="text" name="captcha" id="captchaInput" value="" tabindex="4"
+         disabled="disabled">
   <!-- <input type="text" name="captcha" id="captchaInput" value="" tabindex="4"> -->
-<!--  -->
-  <!-- <input type="hidden" name="captchaid" value="{{ .FormCaptchaId }}"> -->
-  <!-- <!-- <input type="submit" tabindex="5" disabled="disabled"> --> -->
+
+  <input type="hidden" name="captchaid" value="{{ .FormCaptchaId }}">
+  <input type="submit" tabindex="5" disabled="disabled">
   <!-- <input type="submit" tabindex="5"> -->
-<!-- </form> -->
+</form>
 
 {{ if $comments }}
   <h2 id="comments">Comments</h2>
