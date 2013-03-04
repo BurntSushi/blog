@@ -23,11 +23,11 @@
 {{ $comments := .CommentsGet }}
 
 <h2 id="post-comment">Add a Comment</h2>
-<p>Until I have time to figure out how to stop spammers, I've disabled
+<!-- <p>Until I have time to figure out how to stop spammers, I've disabled
    comments. If you need to contact me (or have suggestions on how to fight
    spammers), please use
    <img src="http://burntsushi.net/images/gmail.png" alt="My email address">.
-   </p>
+   </p> -->
 <!-- <p>Some name is required, but your email address is
    <strong>not required.</strong> If you provide an email address, we will
    use it <strong>only</strong> to notify you of new comments on
@@ -39,10 +39,10 @@
 <form id="postComment" method="post" action="/{{ .Ident }}#post-comment">
   <div>
     <label for="author">Name: </label>
-    <input type="text" name="author" id="author" disabled="disabled"
-           value="{{ .FormAuthor }}" tabindex="1">
-    <!-- <input type="text" name="author" id="author" -->
+    <!-- <input type="text" name="plato" id="author" disabled="disabled" -->
            <!-- value="{{ .FormAuthor }}" tabindex="1"> -->
+    <input type="text" name="plato" id="author"
+           value="{{ .FormAuthor }}" tabindex="1">
   </div>
   <!--
   <div>
@@ -54,9 +54,9 @@
 
   <p><a href="https://github.com/russross/blackfriday">Markdown</a>
      is allowed in your comment.</p>
-   <textarea name="comment" tabindex="3"
-             disabled="disabled">{{ .FormComment }}</textarea>
-   <!-- <textarea name="comment" tabindex="3">{{ .FormComment }}</textarea> -->
+   <!-- <textarea name="cauchy" tabindex="3" -->
+             <!-- disabled="disabled">{{ .FormComment }}</textarea> -->
+   <textarea name="cauchy" tabindex="3">{{ .FormComment }}</textarea>
 
   <p><label for="captchaInput">
        <img src="/captcha/{{ .FormCaptchaId }}.png" id="captcha"
@@ -65,13 +65,13 @@
   <p><a href="javascript:reloadCaptcha();">
       I can't read the CAPTCHA image.</a></p>
   <p>Please verify your humanity:</p>
-  <input type="text" name="captcha" id="captchaInput" value="" tabindex="4"
-         disabled="disabled">
-  <!-- <input type="text" name="captcha" id="captchaInput" value="" tabindex="4"> -->
+  <!-- <input type="text" name="captcha" id="captchaInput" value="" tabindex="4" -->
+         <!-- disabled="disabled"> -->
+  <input type="text" name="captcha" id="captchaInput" value="" tabindex="4">
 
   <input type="hidden" name="captchaid" value="{{ .FormCaptchaId }}">
-  <input type="submit" tabindex="5" disabled="disabled">
-  <!-- <input type="submit" tabindex="5"> -->
+  <!-- <input type="submit" tabindex="5" disabled="disabled"> -->
+  <input type="submit" tabindex="5">
 </form>
 
 {{ if $comments }}

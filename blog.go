@@ -235,8 +235,8 @@ func showPost(w http.ResponseWriter, req *http.Request) {
 // particular entry. This allows us to rely on the existing cache to provide
 // a unique identifier as a comment file name. (i.e., an incrementing integer.)
 func addComment(w http.ResponseWriter, req *http.Request) {
-	render404(w, "add comment")
-	return
+	// render404(w, "add comment") 
+	// return 
 
 	vars := mux.Vars(req)
 	post := forceValidPost(w, vars["postname"])
@@ -245,9 +245,9 @@ func addComment(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Get the form values.
-	author := strings.TrimSpace(req.FormValue("author"))
+	author := strings.TrimSpace(req.FormValue("plato"))
 	email := strings.TrimSpace(req.FormValue("email"))
-	comment := strings.TrimSpace(req.FormValue("comment"))
+	comment := strings.TrimSpace(req.FormValue("cauchy"))
 
 	// First check the captcha before anything else.
 	captchaId := req.FormValue("captchaid")
