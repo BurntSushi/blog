@@ -109,8 +109,8 @@ p, ul li {
 .code, code {
   font-family: "DejaVu Sans Mono", monospace;
   font-size: 105%;
-  background: #444;
-  color: #fff;
+  background: rgb(248, 248, 255);
+  color: #000;
   border: 1px solid #000;
   padding: 1px;
 }
