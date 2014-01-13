@@ -54,9 +54,9 @@
 
   <p><a href="https://github.com/russross/blackfriday">Markdown</a>
      is allowed in your comment.</p>
-   <!-- <textarea name="cauchy" tabindex="3" -->
-             <!-- disabled="disabled">{{ .FormComment }}</textarea> -->
-   <textarea name="cauchy" tabindex="3">{{ .FormComment }}</textarea>
+   <textarea name="cauchy" tabindex="3"
+             disabled="disabled">{{ .FormComment }}</textarea>
+   <!-- <textarea name="cauchy" tabindex="3">{{ .FormComment }}</textarea> -->
 
   <p><label for="captchaInput">
        <img src="/captcha/{{ .FormCaptchaId }}.png" id="captcha"
@@ -65,13 +65,13 @@
   <p><a href="javascript:reloadCaptcha();">
       I can't read the CAPTCHA image.</a></p>
   <p>Please verify your humanity:</p>
-  <!-- <input type="text" name="captcha" id="captchaInput" value="" tabindex="4" -->
-         <!-- disabled="disabled"> -->
-  <input type="text" name="captcha" id="captchaInput" value="" tabindex="4">
+  <input type="text" name="captcha" id="captchaInput" value="" tabindex="4"
+         disabled="disabled">
+  <!-- <input type="text" name="captcha" id="captchaInput" value="" tabindex="4"> -->
 
   <input type="hidden" name="captchaid" value="{{ .FormCaptchaId }}">
-  <!-- <input type="submit" tabindex="5" disabled="disabled"> -->
-  <input type="submit" tabindex="5">
+  <input type="submit" tabindex="5" disabled="disabled">
+  <!-- <input type="submit" tabindex="5"> -->
 </form>
 
 {{ if $comments }}
