@@ -12,7 +12,7 @@ import (
 	"syscall"
 	txtTemplate "text/template"
 
-	"code.google.com/p/gorilla/mux"
+	"github.com/gorilla/mux"
 
 	auth "github.com/abbot/go-http-auth"
 
