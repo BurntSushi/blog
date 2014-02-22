@@ -109,9 +109,9 @@ func main() {
 		http.FileServer(http.Dir(staticPath))))
 
 	// Password protect data refreshing
-	authenticator := auth.BasicAuthenticator(
+	authenticator := auth.NewBasicAuthenticator(
 		"Refresh data", auth.HtpasswdFileProvider(*htpasswd))
-	r.HandleFunc("/refresh", authenticator(showRefresh))
+	r.HandleFunc("/refresh", auth.JustCheck(authenticator, showRefresh))
 
 	// These must be last. The first shows blog posts, the second adds comments.
 	r.HandleFunc("/{postname}", showPost).Methods("GET")
@@ -279,7 +279,7 @@ func addComment(w http.ResponseWriter, req *http.Request) {
 // showRefresh completely reloads the view, post and comment caches from disk.
 // It prints a silly message in response.
 // Note that this page is password protected. (Thanks abbot!)
-func showRefresh(w http.ResponseWriter, req *auth.AuthenticatedRequest) {
+func showRefresh(w http.ResponseWriter, req *http.Request) {
 	refreshViews()
 	refreshPosts()
 	fmt.Fprintln(w, "Data refreshed!")
