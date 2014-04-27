@@ -1,0 +1,42 @@
+#!/usr/bin/env python2
+
+from __future__ import absolute_import, print_function, division
+import subprocess
+import sys
+
+if len(sys.argv) != 2:
+    print("Usage: check cmd < source.rs", file=sys.stderr)
+    sys.exit(1)
+
+cmd = sys.argv[1]
+seen_marker = False
+expected = []
+for line in sys.stdin:
+    line = line.strip()
+    if seen_marker:
+        if line.startswith('//'):
+            expected.append(line[2:].strip())
+        else:
+            break
+    if line.startswith('// Output:'):
+        seen_marker = True
+expected = '\n'.join(expected)
+got = subprocess.check_output([cmd]).strip()
+
+if expected != got:
+    sep = '-' * 40
+    tpl = """Expected
+{sep}
+{expected}
+{sep}
+
+but got
+{sep}
+{got}
+{sep}
+"""
+    print(tpl.format(sep=sep, expected=expected, got=got))
+    sys.exit(1)
+else:
+    sys.exit(0)
+

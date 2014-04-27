@@ -1,0 +1,29 @@
+name                        dynamic regexes                        native regexes
+--------------------------------------------------------------------------------------------------------
+literal                         434 ns/iter (+/- 3)                    134 ns/iter (+/- 2)
+not_literal                    1930 ns/iter (+/- 9)                   1051 ns/iter (+/- 6)
+match_class                    2457 ns/iter (+/- 12)                  1391 ns/iter (+/- 7)
+match_class_in_range           2707 ns/iter (+/- 12)                  1433 ns/iter (+/- 3)
+replace_all                    3735 ns/iter (+/- 34)                  1271 ns/iter (+/- 14)             
+anchored_short_non_match        900 ns/iter (+/- 6)                    454 ns/iter (+/- 2)
+anchored_long_non_match        8155 ns/iter (+/- 634)                 5410 ns/iter (+/- 64)
+anchored_short_match            472 ns/iter (+/- 16)                   149 ns/iter (+/- 1)
+anchored_long_match             487 ns/iter (+/- 11)                   154 ns/iter (+/- 2)
+one_pass_short_a               2108 ns/iter (+/- 11)                  1329 ns/iter (+/- 16)
+one_pass_short_a_not           2577 ns/iter (+/- 81)                  1635 ns/iter (+/- 52)
+one_pass_short_b               1509 ns/iter (+/- 6)                    913 ns/iter (+/- 2)
+one_pass_short_b_not           1997 ns/iter (+/- 27)                  1141 ns/iter (+/- 2)
+one_pass_long_prefix           1133 ns/iter (+/- 7)                    395 ns/iter (+/- 8)
+one_pass_long_prefix_not       1145 ns/iter (+/- 4)                    402 ns/iter (+/- 3)
+easy0_32                       5199 ns/iter (+/- 111) = 6 MB/s         262 ns/iter (+/- 1) = 122 MB/s
+easy0_1K                       7533 ns/iter (+/- 87) = 135 MB/s       1281 ns/iter (+/- 159) = 799 MB/s
+easy0_32K                     86868 ns/iter (+/- 783) = 377 MB/s     33968 ns/iter (+/- 2241) = 964 MB/s
+easy1_32                       5714 ns/iter (+/- 174) = 5 MB/s         372 ns/iter (+/- 79) = 86 MB/s
+easy1_1K                       9125 ns/iter (+/- 988) = 112 MB/s      1890 ns/iter (+/- 622) = 541 MB/s
+easy1_32K                    126966 ns/iter (+/- 4464) = 258 MB/s    51002 ns/iter (+/- 3982) = 642 MB/s
+medium_32                      6196 ns/iter (+/- 124) = 5 MB/s         809 ns/iter (+/- 38) = 39 MB/s
+medium_1K                     37968 ns/iter (+/- 637) = 26 MB/s      17165 ns/iter (+/- 210) = 59 MB/s
+medium_32K                  1053551 ns/iter (+/- 5442) = 31 MB/s    541218 ns/iter (+/- 4247) = 60 MB/s
+hard_32                        7283 ns/iter (+/- 43) = 4 MB/s         1342 ns/iter (+/- 16) = 23 MB/s
+hard_1K                       60998 ns/iter (+/- 423) = 16 MB/s      33377 ns/iter (+/- 240) = 30 MB/s
+hard_32K                    1779833 ns/iter (+/- 5978) = 18 MB/s   1061047 ns/iter (+/- 9319) = 30 MB/s
