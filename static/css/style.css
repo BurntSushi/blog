@@ -18,7 +18,7 @@ a:hover {
 }
 
 div#container {
-  width: 920px;
+  max-width: 920px;
   min-height: 100%;
   margin: 0 auto;
   background: #fff;
