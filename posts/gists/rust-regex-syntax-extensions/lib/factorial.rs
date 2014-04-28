@@ -23,8 +23,8 @@ fn expand(cx: &mut ExtCtxt, _: codemap::Span, _: &[ast::TokenTree]) -> ~MacResul
 }
 
 fn factorial(n: u64) -> u64 {
-    match n {
-        0 | 1 => 1,
-        n => n * factorial(n - 1),
-    }
+    // Brings the 'product' method from the MultiplicativeIterator trait
+    // into scope.
+    use std::iter::MultiplicativeIterator;
+    range(2, n+1).product()
 }

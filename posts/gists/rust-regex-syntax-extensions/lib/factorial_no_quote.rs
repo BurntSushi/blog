@@ -30,19 +30,17 @@ pub fn macro_registrar(register: |ast::Name, SyntaxExtension|) {
 
 fn expand(_: &mut ExtCtxt, sp: codemap::Span, _: &[ast::TokenTree]) -> ~MacResult {
     let answer = factorial(5 as u64);
-    MacExpr::new(int_literal(sp, answer))
+    MacExpr::new(uint_literal(sp, answer))
 }
 
 fn factorial(n: u64) -> u64 {
-    match n {
-        0 | 1 => 1,
-        n => n * factorial(n - 1),
-    }
+    use std::iter::MultiplicativeIterator;
+    range(2, n+1).product()
 }
 
-fn int_literal(sp: codemap::Span, n: u64) -> @ast::Expr {
+fn uint_literal(sp: codemap::Span, n: u64) -> @ast::Expr {
     let lit = ast::LitUint(n as u64, ast::TyU64);
-    let spanned = @codemap::Spanned { span: sp, node: lit };
+    let spanned = @codemap::respan(sp, lit);
     dummy_expr(sp, ast::ExprLit(spanned))
 }
 

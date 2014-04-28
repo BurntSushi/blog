@@ -29,10 +29,8 @@ fn expand(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> ~MacRe
 }
 
 fn factorial(n: u64) -> u64 {
-    match n {
-        0 | 1 => 1,
-        n => n * factorial(n - 1),
-    }
+    use std::iter::MultiplicativeIterator;
+    range(2, n+1).product()
 }
 
 fn parse(cx: &mut ExtCtxt, tts: &[ast::TokenTree]) -> Option<u64> {
