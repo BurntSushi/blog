@@ -5,8 +5,8 @@
 // The `phase` attribute is used here to indicate that the `factorial` crate
 // provides a syntax extension.
 // It's also possible for `factorial` to provide things other than a syntax
-// extension, in which case, `#[phase(syntax, link)]` is required.
-#[phase(syntax)] extern crate factorial;
+// extension, in which case, `#[phase(plugin, link)]` is required.
+#[phase(plugin)] extern crate factorial;
 
 fn main() {
     println!("{}", factorial!());

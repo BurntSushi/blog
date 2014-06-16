@@ -1,6 +1,6 @@
 #![feature(phase)]
 extern crate regex;
-#[phase(syntax)] extern crate regex_macros;
+#[phase(plugin)] extern crate regex_macros;
 
 fn main() {
     let re = regex!(r"\d{4}-\d{2}-\d{2}");

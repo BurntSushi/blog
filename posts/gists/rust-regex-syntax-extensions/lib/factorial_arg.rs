@@ -1,25 +1,22 @@
 #![crate_type = "dylib"]
-#![feature(macro_registrar, managed_boxes, quote)]
+#![feature(plugin_registrar, quote)]
 
+extern crate rustc;
 extern crate syntax;
 
 use syntax::ast;
 use syntax::codemap;
-use syntax::ext::base::{
-    SyntaxExtension, ExtCtxt, MacResult, MacExpr,
-    NormalTT, BasicMacroExpander,
-    DummyResult,
-};
+use syntax::ext::base::{ExtCtxt, MacResult, MacExpr, DummyResult};
 use syntax::parse;
 use syntax::parse::token;
+use rustc::plugin::Registry;
 
-#[macro_registrar]
-pub fn macro_registrar(register: |ast::Name, SyntaxExtension|) {
-    let expander = ~BasicMacroExpander { expander: expand, span: None };
-    register(token::intern("factorial"), NormalTT(expander, None))
+#[plugin_registrar]
+pub fn plugin_registrar(reg: &mut Registry) {
+    reg.register_macro("factorial", expand)
 }
 
-fn expand(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> ~MacResult {
+fn expand(cx: &mut ExtCtxt, sp: codemap::Span, tts: &[ast::TokenTree]) -> Box<MacResult> {
     let n = match parse(cx, tts) {
         Some(n) => n,
         None => return DummyResult::expr(sp),
@@ -61,6 +58,6 @@ fn parse(cx: &mut ExtCtxt, tts: &[ast::TokenTree]) -> Option<u64> {
 
     let err = format!("expected unsigned integer literal but got `{}`",
                       pprust::expr_to_str(arg));
-    cx.span_err(parser.span, err);
+    cx.span_err(parser.span, err.as_slice());
     None
 }

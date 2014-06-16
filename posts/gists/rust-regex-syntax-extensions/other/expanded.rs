@@ -1,15 +1,26 @@
 #![feature(phase)]
+#![feature(phase)]
+#![no_std]
+#![feature(globs)]
+#[phase(plugin, link)]
+extern crate std = "std#0.11.0-pre";
+extern crate native = "native#0.11.0-pre";
 
 extern crate regex;
-#[phase(syntax)]
+#[phase(plugin)]
 extern crate regex_macros;
+use std::prelude::*;
 
 fn main() {
     let _ =
         {
+            #[allow(dead_code)]
+            static CAP_NAMES: &'static [Option<&'static str>] = &[];
+            #[allow(dead_code)]
             fn exec<'t>(which: ::regex::native::MatchKind, input: &'t str,
                         start: uint, end: uint) -> Vec<Option<uint>> {
                 #![allow(unused_imports)]
+                #![allow(unused_mut)]
                 use regex::native::{MatchKind, Exists, Location, Submatches,
                                     StepState, StepMatchEarlyReturn,
                                     StepMatch, StepContinue, CharReader,
@@ -30,11 +41,11 @@ fn main() {
                     fn run(&mut self, start: uint, end: uint) ->
                      Vec<Option<uint>> {
                         let mut matched = false;
-                        let prefix_bytes: &[u8] =
-                            &[104u8, 105u8, 112u8, 112u8, 111u8];
+                        let prefix_bytes: &[u8] = &[104, 105, 112, 112, 111];
                         let mut clist = &mut Threads::new(self.which);
                         let mut nlist = &mut Threads::new(self.which);
-                        let mut groups = [None, None];
+                        let mut groups =
+                            [::std::option::None, ::std::option::None];
                         self.ic = start;
                         let mut next_ic = self.chars.set(start);
                         while self.ic <= end {
@@ -58,28 +69,39 @@ fn main() {
                             }
                             self.ic = next_ic;
                             next_ic = self.chars.advance();
-                            let mut i = 0;
-                            while i < clist.size {
-                                let pc = clist.pc(i);
-                                let step_state =
-                                    self.step(&mut groups, nlist,
-                                              clist.groups(i), pc);
-                                match step_state {
-                                    StepMatchEarlyReturn =>
-                                    return {
-                                               let mut _temp =
-                                                   ::std::vec::Vec::new();
-                                               _temp.push(Some(0u));
-                                               _temp.push(Some(0u));
-                                               _temp
-                                           },
-                                    StepMatch => {
-                                        matched = true;
-                                        clist.empty()
-                                    },
-                                    StepContinue => { }
+                            match &mut range(0, clist.size) {
+                                __i =>
+                                loop  {
+                                    match __i.next() {
+                                        None => break ,
+                                        Some(mut __value) => {
+                                            let i = __value;
+                                            {
+                                                let pc = clist.pc(i);
+                                                let step_state =
+                                                    self.step(&mut groups,
+                                                              nlist,
+                                                              clist.groups(i),
+                                                              pc);
+                                                match step_state {
+                                                    StepMatchEarlyReturn =>
+                                                    return {
+                                                               let mut _temp =
+                                                                   ::std::vec::Vec::new();
+                                                               _temp.push(Some(0u));
+                                                               _temp.push(Some(0u));
+                                                               _temp
+                                                           },
+                                                    StepMatch => {
+                                                        matched = true;
+                                                        break
+                                                    },
+                                                    StepContinue => { }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
-                                i += 1;
                             }
                             ::std::mem::swap(&mut clist, &mut nlist);
                             nlist.empty();
@@ -158,12 +180,14 @@ fn main() {
                                     Submatches => {
                                         match &mut groups.mut_iter().zip(caps.iter())
                                             {
-                                            i =>
+                                            __i =>
                                             loop  {
-                                                match i.next() {
+                                                match __i.next() {
                                                     None => break ,
-                                                    Some((slot, val)) => {
-                                                        *slot = *val;
+                                                    Some(mut __value) => {
+                                                        let (slot, val) =
+                                                            __value;
+                                                        { *slot = *val; }
                                                     }
                                                 }
                                             }
@@ -237,8 +261,9 @@ fn main() {
                 impl Threads {
                     fn new(which: MatchKind) -> Threads {
                         Threads{which: which,
-                                queue: unsafe { ::std::mem::uninit() },
-                                sparse: unsafe { ::std::mem::uninit() },
+                                queue: unsafe { ::std::mem::uninitialized() },
+                                sparse:
+                                    unsafe { ::std::mem::uninitialized() },
                                 size: 0,}
                     }
                     #[inline]
@@ -254,12 +279,13 @@ fn main() {
                             Submatches => {
                                 match &mut t.groups.mut_iter().zip(groups.iter())
                                     {
-                                    i =>
+                                    __i =>
                                     loop  {
-                                        match i.next() {
+                                        match __i.next() {
                                             None => break ,
-                                            Some((slot, val)) => {
-                                                *slot = *val;
+                                            Some(mut __value) => {
+                                                let (slot, val) = __value;
+                                                { *slot = *val; }
                                             }
                                         }
                                     }
@@ -290,8 +316,9 @@ fn main() {
                     }
                 }
             }
-            ::regex::Regex{original: ~"hippo[a-fx-z0-9]+",
-                           names: ~[],
-                           p: ::regex::native::Native(exec),}
+            ::regex::native::Native(::regex::native::Native{original:
+                                                                "hippo[a-fx-z0-9]+",
+                                                            names: CAP_NAMES,
+                                                            prog: exec,})
         };
 }
