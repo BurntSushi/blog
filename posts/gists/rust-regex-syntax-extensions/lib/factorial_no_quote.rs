@@ -30,6 +30,8 @@ fn expand(_: &mut ExtCtxt, sp: codemap::Span, _: &[ast::TokenTree]) -> Box<MacRe
 }
 
 fn factorial(n: u64) -> u64 {
+    // Brings the 'product' method from the MultiplicativeIterator trait
+    // into scope.
     use std::iter::MultiplicativeIterator;
     range(2, n+1).product()
 }
