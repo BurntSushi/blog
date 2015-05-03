@@ -1,28 +1,35 @@
-<!-- writing-toml-type-checker-golang -->
-## Writing a TOML type checker with Go
++++
+date = "2013-03-03T21:07:00-05:00"
+draft = true
+title = "Writing a TOML type checker with Go"
+author = "Andrew Gallant"
+url = "writing-toml-type-checker-golang"
++++
 
 On February 23, 2013 at 7:05PM, the first draft of
 [Tom's Obvious, Minimul Language (TOML) specification](https://github.com/mojombo/toml)
 was published. According to the author,
 [Tom Preston-Warner](https://github.com/mojombo),
-TOML aims to be a minimal configuration file format that's easy to read due to 
+TOML aims to be a minimal configuration file format that's easy to read due to
 obvious semantics.
+
+<!--more-->
 
 Whatever the merits of such a project, the author's celebrity status provoked
 a flurry of activity:
 After two and a half hours, the
 [first parser for TOML](https://github.com/mojombo/toml/commit/8eed1921d1261e332ca94cf81c30b87f2b1bdde0)
-was published. 
+was published.
 After 24 hours, there were nearly 22 parsers spanning 10 languages.
 Now, after 1 week, there are 44 parsers spanning 22 languages
-including [my own contribution](https://github.com/BurntSushi/toml) and a 
-[language agnostic test suite](https://github.com/BurntSushi/toml-test) with 
+including [my own contribution](https://github.com/BurntSushi/toml) and a
+[language agnostic test suite](https://github.com/BurntSushi/toml-test) with
 50+ tests.
 
 The pace at which the specification has evolved is no less impressive.
 Of particular note is the evolution of the type of an array.
 When the spec was first introduced, arrays were homogeneous, **but** the type
-of array was simply `array`. That is, the type of an array didn't depend on the 
+of array was simply `array`. That is, the type of an array didn't depend on the
 type of the value it contained.
 
 This leads to arrays like this being disallowed:
@@ -37,7 +44,7 @@ but arrays like this being allowed:
 array = [[1, 2, 3], ["not", "a", "number"]]
 ```
 
-As someone who enjoys using strongly and staticly typed languages where the 
+As someone who enjoys using strongly and staticly typed languages where the
 type of an array includes the type of the values it contains, I suggested that
 [TOML should support fully homogeneous arrays](https://github.com/mojombo/toml/issues/28).
 During the discussion, the idea of
@@ -50,8 +57,8 @@ into the specification.
 
 ### A tuple interlude
 
-As a quick reminder, a tuple can contain any number of elements but can be 
-completely heterogeneous. Namely, the type of a tuple includes the types of all 
+As a quick reminder, a tuple can contain any number of elements but can be
+completely heterogeneous. Namely, the type of a tuple includes the types of all
 of its values, where order matters. Here's a few examples of valid tuples with
 different types:
 
@@ -63,7 +70,7 @@ different types:
 (1.0, 2.0, true) :: (Float, Float, Bool)
 ```
 
-Tuples can be used in fully homogeneous arrays to create well-typed 
+Tuples can be used in fully homogeneous arrays to create well-typed
 structured data with mixed types:
 
 ```ini
@@ -91,25 +98,25 @@ invalid2 = [(1, 2), (3, 4, 5)]
 
 ### Type checking
 
-Now that we've established the semantics of arrays and tuples in TOML, we need 
-some way of *enforcing* those semantics. In the first iteration of the TOML 
-specification, checking types was easy since there were no composite types. 
-Namely, the type of an array was simply `array`, so that if all values in any 
+Now that we've established the semantics of arrays and tuples in TOML, we need
+some way of *enforcing* those semantics. In the first iteration of the TOML
+specification, checking types was easy since there were no composite types.
+Namely, the type of an array was simply `array`, so that if all values in any
 particular array had the same type, then the array was well-typed.
 
-But now that arrays and tuples are defined in part by the types of their 
+But now that arrays and tuples are defined in part by the types of their
 components, a bit more sophistication in our type checking wouldn't hurt.
 
 
 ### Defining type equality
 
-The first step in creating a type checker is defining equality between two 
+The first step in creating a type checker is defining equality between two
 types. Is the type of `5` equal to the type of `10`? What about `10.0`?
-The type of `5` and `10` is simply `Integer`, so they have equivalent types. 
-But the type of `10.0` is `Float`, so it does not have the same type as `5` or 
+The type of `5` and `10` is simply `Integer`, so they have equivalent types.
+But the type of `10.0` is `Float`, so it does not have the same type as `5` or
 `10`.
 
-Equality among primitive types (types that don't have any component types) 
+Equality among primitive types (types that don't have any component types)
 is easy: they are equal if and only if the name of the type is equal:
 
 ```go
@@ -121,13 +128,13 @@ func typeEqual(t1, t2 tomlType) bool {
 }
 ```
 
-In this function, we accept any two TOML types and return true if their names 
+In this function, we accept any two TOML types and return true if their names
 are equal. (I'll discuss how this works in Go in a little bit.)
 
-But what about composite types? Certainly, for any two composite types to be 
-equivalent, their *names* have to be equivalent. The logic we have in 
-`typeEqual` so far is valid. But what about the types of their components? 
-Arrays have a single component type, while tuples can have any number of 
+But what about composite types? Certainly, for any two composite types to be
+equivalent, their *names* have to be equivalent. The logic we have in
+`typeEqual` so far is valid. But what about the types of their components?
+Arrays have a single component type, while tuples can have any number of
 component types. One reasonable way to compare such types is to compare the
 types of their components:
 
@@ -154,15 +161,15 @@ func typeEqual(t1, t2 tomlType) bool {
 }
 ```
 
-This will distinguish between types `[Integer]` and `[Float]`, and will 
+This will distinguish between types `[Integer]` and `[Float]`, and will
 also distinguish between types `(Int, String)` and `(Int, String, String)`.
-As a bonus, since our definition of equality is recursive, `typeEqual` 
+As a bonus, since our definition of equality is recursive, `typeEqual`
 automatically works with any combination of array and tuple types.
 
 
 ### The Go types
 
-So far, the only Go code I've shown you is `typeEqual`, which I said expected 
+So far, the only Go code I've shown you is `typeEqual`, which I said expected
 *any* two TOML types. But each TOML type has a different Go representation:
 
 ```go
@@ -180,7 +187,7 @@ type tomlTupleType struct {
 }
 ```
 
-How do we reconcile them? If we think about types as a set of operations, 
+How do we reconcile them? If we think about types as a set of operations,
 then we can use a Go interface:
 
 ```go
@@ -190,9 +197,9 @@ type tomlType interface {
 }
 ```
 
-So that every TOML type represented in Go has to implement a `name` and 
-`components` method. A base or primitive type will always return zero component 
-types, an array type will return one component type and a tuple will return 
+So that every TOML type represented in Go has to implement a `name` and
+`components` method. A base or primitive type will always return zero component
+types, an array type will return one component type and a tuple will return
 zero or more component types:
 
 ```go
@@ -216,10 +223,10 @@ Not quite. We aren't out of the dog house yet.
 
 ### The empty list
 
-There's still one case remaining: what is the type of the empty list, `[]`? 
-It has no values, so there is nothing we can use to infer its type as any of 
+There's still one case remaining: what is the type of the empty list, `[]`?
+It has no values, so there is nothing we can use to infer its type as any of
 the previously mentioned TOML types.
-What if we gave `[]` its own special type? Then something like this wouldn't be 
+What if we gave `[]` its own special type? Then something like this wouldn't be
 allowed in TOML:
 
 ```ini
@@ -228,9 +235,9 @@ data = [[1, 2, 3], [], [4, 5, 6]]
 
 Since the type of `[]` would be distinct from the type of `[Integer]`.
 
-Instead of giving `[]` its own type, we can make it polymorphic! And for the 
-purposes of TOML, we can adopt a simplistic definition of a polymorphic type: a 
-type that is equal to any other type. This allows for the following to be valid 
+Instead of giving `[]` its own type, we can make it polymorphic! And for the
+purposes of TOML, we can adopt a simplistic definition of a polymorphic type: a
+type that is equal to any other type. This allows for the following to be valid
 TOML:
 
 ```ini
@@ -238,8 +245,8 @@ emptiness = []
 data = [[1, 2, 3], [], [4, 5, 6]]
 ```
 
-But how do we incorporate it into our definition of type equality? Easy. If one 
-of the types we're comparing is polymorphic, then we say that the two types are 
+But how do we incorporate it into our definition of type equality? Easy. If one
+of the types we're comparing is polymorphic, then we say that the two types are
 equivalent:
 
 ```go
@@ -280,8 +287,8 @@ And a new polymorphic type represented in Go as an empty struct:
 type tomlPolymorphicType struct{}
 ```
 
-Where we define the method `polymorphic` to always return `false` for all types 
-except `tomlPolymorphicType`, in which the `polymorphic` method always returns 
+Where we define the method `polymorphic` to always return `false` for all types
+except `tomlPolymorphicType`, in which the `polymorphic` method always returns
 `true`.
 
 
@@ -311,7 +318,7 @@ $ cat > bad.toml <<EOF
 > data = [(1, "a"), [], (2, "b")]
 > EOF
 $ tomlv -types bad.toml
-Error in 'bad.toml': Near line 1, key 'data': Array contains values of type 
+Error in 'bad.toml': Near line 1, key 'data': Array contains values of type
 '(Integer, String)' and '[a]', but arrays must be homogeneous.
 ```
 

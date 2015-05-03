@@ -1,0 +1,206 @@
++++
+date = "2012-07-01T00:39:00-05:00"
+draft = false
+title = "Running Archlinux on the Lenovo Thinkpad T430"
+author = "Andrew Gallant"
+url = "lenovo-thinkpad-t430-archlinux"
++++
+
+In sum, Archlinux is working beautifully. What follows is a rough run down of
+my notes while installing, configuring, tuning and using Archlinux on the
+Lenovo Thinkpad T430.
+
+<!--more-->
+
+### Specs
+  * i7 3520M (Dual core, Four threads, 4M cache, 2.9GHz)
+  * 14" 1600x900 display
+  * Intel HD Graphics 4000, **no discrete graphics card**
+  * 4GB memory
+  * 128GB Crucial m4 2.5" (7mm) SSD (laptop came with a 320GB 7200rpm platter)
+  * 9 cell 70++ battery
+  * Intel Centrino Wireless-N 2200 (2x2 BGN)
+
+### Software that I typically use
+
+No desktop environment. Openbox/pytyle3/pager-multihead. Gkrellm. Konsole.
+Google Chrome. Vim. Konversation. Wicd.
+
+### Battery life
+
+On 66% brightness, about 8 hours seems to be the sweet spot for
+typical usage (web browsing and vim). 100% brightness seems to knock this down
+to the 5-6 hour range. I've only had the laptop for a couple of days, so these
+numbers are pretty rough and based somewhat on extrapolation.
+
+I have all of the tweaks suggested by `powertop` enabled.
+This includes wifi, audio, SATA link and usb power management.
+
+I also have the `ondemand` CPU frequency governor enable, which is the default
+nowadays anyway. Changing governors (tested powersave, performance and
+conservative) works perfectly.
+
+### Disable KMS when using the current Archlinux installer
+
+The current default Archlinux installer uses an older kernel that doesn't
+include the updated drivers for Intel's HD 4000 graphics (and possibly wifi?),
+so KMS fails once it tries to load---which ends up borking the display. To get
+around this, add 'nomodeset' to the kernel boot parameters to disable KMS.
+You'll have to do this again on initial boot if you install the kernel that
+comes with the installer. Once an updated kernel is installed, this boot
+parameter is no longer needed since the driver for the Intel HD 4000 graphics
+chipset is included. The available snapshot installers have an updated kernel,
+and therefore disabling KMS is unnecessary if you're using them.
+
+### [Most of the current T420 wiki page is relevant](https://wiki.archlinux.org/index.php/Lenovo_ThinkPad_T420)
+
+And by that I mean, most things *just work*. Wifi, graphics (with
+xf86-video-intel), CPU frequency scaling, screen brightness, keyboard
+backlight, and *excellent* two finger scrolling (out-of-the-box with
+xf86-input-synaptics, no configuration necessary despite what the T420 wiki
+article says).
+
+### Thinkfan
+
+I installed thinkfan and added the `thinkpad_acpi` kernel module to
+`MODULES` in `/etc/rc.conf`. I also added the `thinkfan` daemon to `DAEMONS` in
+`/etc/rc.conf`. To allow `thinkfan` to control the fan, enable `fan_control` by
+creating `/etc/modprobe.d/thinkfan.conf` with:
+
+```
+options thinkpad_acpi fan_control=1
+```
+
+And this is my thinkfan `/etc/thinkfan.conf`:
+
+```
+sensor /sys/devices/virtual/thermal/thermal_zone0/temp
+
+(0, 0, 40)
+(1, 38, 43)
+(2, 41, 50)
+(3, 44, 54)
+(4, 51, 63)
+(5, 55, 67)
+(7, 61, 32767)
+```
+
+The settings are tweaked (a little less aggressive) from
+[Thinkpad T420 thinkfan settings](http://www.jakubkotowski.com/2011/06/thinkpad-t420-thinkfan-settings.html).
+I've tested it with the utilities in the `cpuburn` package and it seems to
+work well. For me, the fan stays off when idle and kicks into its lowest
+settings on typical usage (web browsing and vim, for me).
+
+Recall that I do not have discrete graphics (i.e., nvidia) and have an SSD,
+which both have impact temperature.
+
+### acpid
+
+This also worked out of the box with one small tweak. In
+`/etc/acpi/handler.sh`, I replaced
+
+``` sh
+ac_adapter)
+    case "$2" in
+        AC|ACAD|ADP0)
+```
+
+with
+
+``` sh
+ac_adapter)
+    case "$2" in
+        ACPI*|AC|ACAD|ADP0)
+```
+
+This was needed because `ac_adapter ACPI0003:00` are the first two arguments
+used when the `ac_adapter` event is triggered.
+
+### pm-utils
+
+Works beautifully. Literally no problems.
+
+### laptop-mode-tools
+
+I don't use it. acpid, pm-utils and powertop's recommended tweaks are enough
+for me. (I use acpid to raise and lower the brightness when the AC adapter is
+[un]plugged, and make sure that on wakeup/boot, the brightness is set
+appropriately.)
+
+### Sleep button
+
+For whatever reason I haven't been able to discover, I cannot detect any power
+button presses (neither through `acpi_listen` or `xev`). However, the T430 has
+an extra unlabeled button to the right of the "turn microphone on/off" button
+that shows up in xev as `XF86Launch1`. Thus, I put this in my `~/.xbindkeys`:
+
+```
+"sudo pm-suspend"
+  XF86Launch1
+```
+
+And it's now a sleep button, as long as you set 'pm-suspend' to require no
+password using `visudo`. For example:
+
+```
+%wheel ALL=(ALL) NOPASSWD: /usr/sbin/pm-suspend
+```
+
+### Web cam
+
+I installed `guvcview` and then ran it. It worked. (It looks like the
+`uvcvideo` kernel module is automatically loaded.)
+
+### Audio/speakers
+
+Alsa just works. Speakers sound good enough to me. (I'm no audiophile though,
+and have never been too picky over audio quality. My ears aren't very
+discerning.)
+
+### What I Haven't tested
+
+VGA. Mini display port. Mic. USB 3.0. mSATA. Memory card slot.
+
+I don't anticipate any problems with these things, though.
+
+### Conclusion
+
+Archlinux works beautifully on this machine. I literally could not have
+imagined a smoother experience. I've installed Arch on several laptops, and
+this was by far the easiest. Having the wifi driver included in the kernel is
+an especially nice thing that I'm not used to. (Been a victim of broadcom for
+many years.) Also, the integrated graphics works beautifully, although I am not
+doing any compositing beyond xcompmgr transparency.
+
+The laptop also has excellent ventilation and actually stays cool enough for it
+to be bearable to sit directly on my lap indefinitely. Even when the CPU is
+chugging.
+
+This laptop also comes with the option of adding nvidia via Optimus. I
+recommend staying away from this unless you're willing to deal with Bumblebee
+or absolutely need a dedicated graphics card. Early reviews seem to indicate
+that Intel's HD 4000 Graphics is quite excellent for integrated graphics,
+particularly compared to the available nvidia option for this laptop (NVIDIA
+NVS 5400M).
+
+There is also a 1366x768 screen option, and based on preliminary reviews, it
+isn't that great. Go with the 1600x900 screen---it seems like the sweet spot.
+
+Finally, this is my first Thinkpad. Incidentally, this is the first time that
+the T-series has had a "chiclet style" keyboard. Personally, I love it and have
+been partial to chiclet style keyboards in the past. The reviews already out
+there are not lying when they speak highly of its quality; it's on the
+best-feeling keyboards I've ever typed on.
+
+With that said, it seems like most of the complaints revolve around the layout.
+The one bugger that has got me so far is the location of the 'fn' and 'control'
+keys. It feels like they should be swapped. `xev` actually picks up 'fn' key
+releases but not key presses. I was unsuccessful in swapping the keys using
+`xmodmap`, but perhaps there is a BIOS option somewhere that will allow a swap.
+(**EDIT**: Indeed, there is a BIOS option that successfully swaps the 'fn' and
+control keys.)
+This is my only complaint with the keyboard layout. (But remember, I was never
+used to the old layout!)
+
+In sum, this appears to be a great laptop to run Linux on.
+

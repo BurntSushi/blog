@@ -3,6 +3,7 @@ date = "2014-04-21T19:51:00-05:00"
 draft = false
 title = "Syntax extensions and regular expressions for Rust"
 author = "Andrew Gallant"
+url = "rust-regex-syntax-extensions"
 +++
 
 A few weeks ago, I set out to add regular expressions to the
@@ -24,6 +25,8 @@ In this article, I will outline my implementation strategy---including code
 samples on how to write a Rust syntax extension---and describe how I was able
 to achieve an identical API between regexes compiled at compile time and
 regexes compiled at runtime.
+
+<!--more-->
 
 
 ### Brief notes on format
@@ -372,7 +375,7 @@ highlighted:
   data-gist-file="lib-factorial_arg.rs"
   data-gist-hide-footer="true"
   data-gist-hide-line-numbers="true"
-  data-gist-highlight-line="999999999,20-25,33-63"
+  data-gist-highlight-line="999999999,20-25,35-65"
  ></code>
 
 The first few changes are fairly trivial. This time, instead of hard-coding the

@@ -1,18 +1,25 @@
-<!-- type-parametric-functions-golang -->
-## Writing type parametric functions in Go
++++
+date = "2013-04-06T12:54:00-05:00"
+draft = false
+title = "Writing type parametric functions in Go"
+author = "Andrew Gallant"
+url = "type-parametric-functions-golang"
++++
 
-Go's only method of compile time safe polymorphism is structural subtyping, and 
-this article will do nothing to change that. Instead, I'm going to present a 
-package `ty` with facilities to write type parametric functions in Go that 
+Go's only method of compile time safe polymorphism is structural subtyping, and
+this article will do nothing to change that. Instead, I'm going to present a
+package `ty` with facilities to write type parametric functions in Go that
 maintain **run time** type safety, while also being convenient for the
 caller to use.
 
-By **run time type safety**, I mean that the types of a function's arguments 
+<!--more-->
+
+By **run time type safety**, I mean that the types of a function's arguments
 are consistent with its parametric type *or else the function predictably
-fails at run time* with a reasonable error message. Stated differently, a lack 
-of run time type safety would permit arguments that are inconsistent with the 
+fails at run time* with a reasonable error message. Stated differently, a lack
+of run time type safety would permit arguments that are inconsistent with the
 function's parametric type at the call site, but might fail with unrelated
-and hard to debug errors (or worse, not fail at all). Thus, run time type 
+and hard to debug errors (or worse, not fail at all). Thus, run time type
 safety in this context is a statement about failure modes.
 
 I will provide examples that clarify run time type safety later in the article.
@@ -20,11 +27,11 @@ I will provide examples that clarify run time type safety later in the article.
 
 ### Warm up
 
-Briefly, type parametric functions operate on their inputs without explicit 
-knowledge of the types of their inputs. That is, they are parameterized on the 
+Briefly, type parametric functions operate on their inputs without explicit
+knowledge of the types of their inputs. That is, they are parameterized on the
 types of their arguments.
 
-If Go had parametric polymorphism available to users, here's what a `Map` 
+If Go had parametric polymorphism available to users, here's what a `Map`
 function *might* look like:
 
 ```go
@@ -52,7 +59,7 @@ and
 
 ### Purpose
 
-The purpose of the `ty` package is to give the programmer the ability to write 
+The purpose of the `ty` package is to give the programmer the ability to write
 the aforementioned `Map` function such that
 
 * It is easy for the caller to use.
@@ -63,24 +70,24 @@ the aforementioned `Map` function such that
 ### Motivation
 
 Let's skip the brouhaha and *assume* you buy into the notion that type
-parametric functions are useful in the hands of the user. The question remains: 
+parametric functions are useful in the hands of the user. The question remains:
 why is such an addition useful when Go already has powerful reflection tools?
-The answer is: working with reflection can be terribly inconvenient, and 
+The answer is: working with reflection can be terribly inconvenient, and
 verifying the consistency of types can be complex and error prone.
 
-I will attempt to convince you of this with code samples using the familiar 
+I will attempt to convince you of this with code samples using the familiar
 `Map` function.
 
 ### An attempt without using reflection
 
-In Go, the type `interface{}` corresponds to the set of types that implement 
-the empty interface. Stated differently: all Go types. It is appropriate to 
-think of an `interface{}` type as conceptually analogous to a <code>void 
-&#42;</code> in C, but there are important operational differences. For 
-example, Go is memory safe, which prevents arbitrary conversion of a value from 
-one type to another.  This limitation in particular makes a `Map` function 
+In Go, the type `interface{}` corresponds to the set of types that implement
+the empty interface. Stated differently: all Go types. It is appropriate to
+think of an `interface{}` type as conceptually analogous to a <code>void
+&#42;</code> in C, but there are important operational differences. For
+example, Go is memory safe, which prevents arbitrary conversion of a value from
+one type to another.  This limitation in particular makes a `Map` function
 without reflection more clumsy than how you might write and use it in C.
-Also, in Go, a value with `interface{}` type still contains information about 
+Also, in Go, a value with `interface{}` type still contains information about
 the value's underlying type, which we will exploit later.
 
 Let's start with writing `Map` using `interface{}`:
@@ -93,7 +100,7 @@ func Map(f func(interface{}) interface{}, xs []interface{}) []interface{} {
 	}
 	return ys
 }
-``` 
+```
 
 This part isn't so bad, but the burden on the caller is outrageous:
 
@@ -114,15 +121,15 @@ for i, x := range gsquared {
 }
 ```
 
-Since we can't do arbitrary type conversions, we need to allocate a new slice 
+Since we can't do arbitrary type conversions, we need to allocate a new slice
 for the arguments, while also allocating a new slice for the return
-value of `interface{}` and type assert each element individually. (A type 
-assertion in Go is a way to state knowledge about the underlying type of an 
-interface value. In the above code, the type assertion will crash the program 
-if it fails.) Moreover, the function `f` provided by the caller must *also* be 
+value of `interface{}` and type assert each element individually. (A type
+assertion in Go is a way to state knowledge about the underlying type of an
+interface value. In the above code, the type assertion will crash the program
+if it fails.) Moreover, the function `f` provided by the caller must *also* be
 generic. Anything with this much burden on the caller probably isn't worth it.
 
-With regard to run time type safety, most of it is contained inside the 
+With regard to run time type safety, most of it is contained inside the
 user-supplied `f` function, but error messages don't address the underlying
 cause. For example, the following code
 
@@ -131,7 +138,7 @@ Map(func(a interface{}) interface{} { return len(a.(string)) },
 	[]interface{}{1, 2, 3})
 ```
 
-fails with a stack trace and an error message: `interface conversion: interface 
+fails with a stack trace and an error message: `interface conversion: interface
 is int, not string`.
 
 
@@ -142,10 +149,10 @@ For those that haven't worked with reflection in Go before,
 is a great introduction to the topic. It is suitable even if you don't know
 Go.
 
-I don't consider it to be a necessary read before moving on, but it is 
+I don't consider it to be a necessary read before moving on, but it is
 important to know this (from "The Laws of Reflection"):
 
-> Reflection in computing is the ability of a program to examine its own 
+> Reflection in computing is the ability of a program to examine its own
 > structure, particularly through types; it's a form of metaprogramming.
 
 With that, let us move on to a `Map` that uses reflection.
@@ -155,8 +162,8 @@ With that, let us move on to a `Map` that uses reflection.
 
 We can make the burden a bit easier on the caller using `Map` by wielding
 the power of reflection to examine and manipulate the structure of a program.
-We wield this power by exploiting the fact that `interface{}` values still 
-contain information about the underlying type of the value it contains. But 
+We wield this power by exploiting the fact that `interface{}` values still
+contain information about the underlying type of the value it contains. But
 this exploitation comes with the price of a more painful `Map` function:
 
 ```go
@@ -174,7 +181,7 @@ func Map(f interface{}, xs interface{}) []interface{} {
 
 Here are the key differences between this `Map` and the last one:
 
-* The type of `f` is now `interface{}` instead of `func(interface{}) 
+* The type of `f` is now `interface{}` instead of `func(interface{})
   interface{}`.
 * The type of `xs` is now `interface{}` instead of `[]interface{}`.
 * The user's `f` function is now applied using reflection instead of
@@ -202,8 +209,8 @@ for i, x := range gsquared {
 }
 ```
 
-Namely, the client is no longer mandated to write `f` as a generic function. It 
-can use its own types without worrying about type assertions. Moreover, the 
+Namely, the client is no longer mandated to write `f` as a generic function. It
+can use its own types without worrying about type assertions. Moreover, the
 client no longer needs to allocate a new slice for the *input* of the function.
 
 But the caller still needs to type assert each element in the returned slice.
@@ -214,9 +221,9 @@ It turns out that it's impossible using reflection in Go 1.0.x.
 
 ### Reflection in Go tip (soon to be Go 1.1)
 
-The [release notes for Go 1.1](http://tip.golang.org/doc/go1.1) detail many 
+The [release notes for Go 1.1](http://tip.golang.org/doc/go1.1) detail many
 welcomed changes, but for this article, we
-[care about the changes made to the reflect 
+[care about the changes made to the reflect
 package](http://tip.golang.org/doc/go1.1#reflect).
 In particular, three new critical functions were added:
 [ChanOf](http://tip.golang.org/pkg/reflect/#ChanOf),
@@ -254,16 +261,16 @@ nearly the level that we saw with the first generic `Map` example:
 squared := Map(func(x int) int { return x * x }, []int{1, 2, 3}).([]int)
 ```
 
-The only burden on the caller is to type assert the return value of the 
-function.  Indeed, this is the best we can do in this regard: all type 
-parametric functions that return a value from now on have this restriction and 
+The only burden on the caller is to type assert the return value of the
+function.  Indeed, this is the best we can do in this regard: all type
+parametric functions that return a value from now on have this restriction and
 *only* this restriction unless stated otherwise.
 
 
 ### Run time type safety
 
-The most recent iteration of the `Map` function is annoying to write, but not 
-*quite* painful. Unfortunately, that's about to change. Consider what happens 
+The most recent iteration of the `Map` function is annoying to write, but not
+*quite* painful. Unfortunately, that's about to change. Consider what happens
 when we try to subvert the parametric type of `Map`
 (which is `func(func(A) B, []A) []B`) by running this code:
 
@@ -274,23 +281,23 @@ Map(func(a string) int { return len(a) }, []int{1, 2, 3}).([]int)
 The program fails with a stack trace and an error message:
 `Call using int as type string`.
 
-Since our program is small, it is easy to see where we went wrong. But in a 
+Since our program is small, it is easy to see where we went wrong. But in a
 larger program, such an error message can be confusing. Moreover, type failures
-could occur anywhere which might make them more confusing. Even worse, other 
-type parametric functions (not `Map`) might not fail at all&mdash;which results 
+could occur anywhere which might make them more confusing. Even worse, other
+type parametric functions (not `Map`) might not fail at all&mdash;which results
 in a total loss of type safety, even at run time.
 
-Therefore, to provide useful and consistent error messages, we must check the 
+Therefore, to provide useful and consistent error messages, we must check the
 invariants in the parametric type of `Map`. Why? Because the Go type of `Map`
 is `func(interface{}, interface{}) interface{}` while the parametric type of
-`Map` is `func(func(A) B, []A) []B`. Since an `interface{}` type can 
+`Map` is `func(func(A) B, []A) []B`. Since an `interface{}` type can
 correspond to *any* type, we need to be exhaustive in our checking:
 
 1. Map's first parameter type must be `func(A) B`
 2. Map's second parameter type must be `[]A1` where `A == A1`.
 3. Map's return type must be `[]B1` where `B == B1`.
 
-Given those invariants, here's a `Map` function that enforces them and produces 
+Given those invariants, here's a `Map` function that enforces them and produces
 sane error messages. (I leave it to the reader to imagine better ones.)
 
 ```go
@@ -358,22 +365,22 @@ type `func(func(A) B, []A) []B`:
 2. Map's second parameter type must be `[]A1` where `A == A1`.
 3. Map's return type must be `[]B1` where `B == B1`.
 
-We can interpret the above constraints as a *unification* problem, which in 
-this case is the problem of finding a set of valid Go types that can replace 
+We can interpret the above constraints as a *unification* problem, which in
+this case is the problem of finding a set of valid Go types that can replace
 all instances of `A`, `A1`, `B` and `B1` in the type of `Map`. We can view
 these Go types as a set of *substitutions*.
 
-More generally, given a *parametric* type of a function and the 
-*non-parametric* types of the function's arguments at run time, find a set of 
-substitutions that *unifies* the parametric type with its arguments. As a 
+More generally, given a *parametric* type of a function and the
+*non-parametric* types of the function's arguments at run time, find a set of
+substitutions that *unifies* the parametric type with its arguments. As a
 bonus, we can use those substitutions to construct new types that `Map` may
 use to make new values.
 
-To be concrete, let's restate the constraints of `Map` in terms of a 
-unification problem. (Note that this isn't really a traditional unification 
+To be concrete, let's restate the constraints of `Map` in terms of a
+unification problem. (Note that this isn't really a traditional unification
 problem, since the types of the arguments are not allowed to be parametric.)
 
-Assume that all types with the `Go` prefix are real Go types like `int`, 
+Assume that all types with the `Go` prefix are real Go types like `int`,
 `string` or `[]byte`.
 
 1. Unify the type `func(A) B` with the first argument.
@@ -397,7 +404,7 @@ A generalized version of this algorithm is implemented in
 which is too big to list here.
 The input of `ty.Check` is a pointer to the type of a parametric function and
 every argument. The output is a slice of reflection values of the arguments,
-a slice of reflection types of the return values and a type environment 
+a slice of reflection types of the return values and a type environment
 containing the substitutions.
 
 
@@ -428,7 +435,7 @@ func Map(f, xs interface{}) interface{} {
 }
 ```
 
-The latter half of the function is something you ought to be deeply familiar 
+The latter half of the function is something you ought to be deeply familiar
 with by now. But the first parts of the function are new and worth inspection:
 
 ```go
@@ -437,12 +444,12 @@ chk := ty.Check(
 	f, xs)
 ```
 
-The first argument to `ty.Check` is a `nil` function pointer with a parametric 
-type. Even though it doesn't point to a valid function, the `Check` function 
+The first argument to `ty.Check` is a `nil` function pointer with a parametric
+type. Even though it doesn't point to a valid function, the `Check` function
 can still query the type information.
 
-But wait. How am I writing a parametric type in Go? The trick is to define 
-a type that can never be equal to any other type unless explicitly declared to 
+But wait. How am I writing a parametric type in Go? The trick is to define
+a type that can never be equal to any other type unless explicitly declared to
 be:
 
 ```go
@@ -463,12 +470,12 @@ type V ty.TypeVariable
 ```
 
 `ty.Check` has the following useful invariant:
-If `Check` returns, then the types of the arguments are consistent with 
-the parametric type of the function, *and* the parametric return types of the 
-function were made into valid Go types that are not parametric. Otherwise, 
+If `Check` returns, then the types of the arguments are consistent with
+the parametric type of the function, *and* the parametric return types of the
+function were made into valid Go types that are not parametric. Otherwise,
 there is a bug in `ty.Check`.
 
-Let's test that invariant. Using the above definition of `Map`, if one tries to 
+Let's test that invariant. Using the above definition of `Map`, if one tries to
 run this code
 
 ```go
@@ -482,7 +489,7 @@ Error type checking
         func(func(ty.A) ty.B, []ty.A) []ty.B
 with argument types
         (func(string) int, []int)
-Type error when unifying type '[]ty.A' and '[]int': Type variable A expected 
+Type error when unifying type '[]ty.A' and '[]int': Type variable A expected
 type 'string' but got 'int'.
 ```
 
@@ -603,7 +610,7 @@ And here's the
 
 ### Back to reality
 
-There's no such thing as a free lunch. The price one must pay to write 
+There's no such thing as a free lunch. The price one must pay to write
 type parametric functions in Go is rather large:
 
 1. Type parametric functions are ***SLOW***.
@@ -611,15 +618,15 @@ type parametric functions in Go is rather large:
 3. Writing type parametric functions is annoying.
 4. Unidiomatic Go.
 
-I think that items `2`, `3` and `4` are fairly self-explanatory if you've been 
-reading along. But I have been coy about `1`: the performance of type 
+I think that items `2`, `3` and `4` are fairly self-explanatory if you've been
+reading along. But I have been coy about `1`: the performance of type
 parametric functions.
 
-As a general rule, they are slow because reflection in Go is slow. In most 
+As a general rule, they are slow because reflection in Go is slow. In most
 cases, slow means *at least an order of magnitude* slower than an equivalent
 implementation that is not type parametric (i.e., hard coded for a particular
-Go type). But, there is hope yet.  Let's take a look at some benchmarks 
-comparing non-parametric (**builtin**) functions with their type parametric 
+Go type). But, there is hope yet.  Let's take a look at some benchmarks
+comparing non-parametric (**builtin**) functions with their type parametric
 (**reflect**) counterparts.
 
 ```
@@ -638,33 +645,33 @@ BenchmarkQuickSort-12                 6325        6051563   +95576.89%
 
 Benchmarks were run on an Intel i7 3930K (12 threads), 32GB of memory,
 Linux 3.8.4 and Go tip on commit `c879a45c3389` with `GOMAXPROCS=12`.
-Code for all benchmarks can be found in 
+Code for all benchmarks can be found in
 [*test.go](https://github.com/BurntSushi/ty/tree/master/fun) files.
 
-There is a lot of data in these benchmarks, so I won't talk about everything. 
+There is a lot of data in these benchmarks, so I won't talk about everything.
 However, it is interesting to see that there are several data points where
 type parametric functions don't perform measurably worse. For example, let's
 look at our old friend `Map`. The type parametric version gets blown away in
 the `MapSquare` benchmark, which just squares a slice of integers. But the
 `MapPrime` benchmark has them performing similarly.
 
-The key is what the benchmark `MapPrime` is doing: performing a very naive 
-algorithm to find the prime factorization of every element in a slice of large 
-integers. The operation itself ends up dwarfing the overhead of using 
-reflection. From a performance perspective, this means `Map` is only useful 
-when either performance doesn't matter or when you know the operation being 
+The key is what the benchmark `MapPrime` is doing: performing a very naive
+algorithm to find the prime factorization of every element in a slice of large
+integers. The operation itself ends up dwarfing the overhead of using
+reflection. From a performance perspective, this means `Map` is only useful
+when either performance doesn't matter or when you know the operation being
 performed isn't trivial.
 
-But what about `ParMap`? `ParMap` is a function that spawns `N` goroutines and 
-computes `f` over the slice concurrently. Even when not using reflection this 
-approach bears a lot of overhead because of synchronization. Indeed, the 
-`ParMapSquare` benchmark shows that the type parametric version is only 
-slightly slower than the built in version. And of course, it is comparable in 
-the `ParMapPrime` benchmark as well. This suggests that, from a performance 
+But what about `ParMap`? `ParMap` is a function that spawns `N` goroutines and
+computes `f` over the slice concurrently. Even when not using reflection this
+approach bears a lot of overhead because of synchronization. Indeed, the
+`ParMapSquare` benchmark shows that the type parametric version is only
+slightly slower than the built in version. And of course, it is comparable in
+the `ParMapPrime` benchmark as well. This suggests that, from a performance
 perspective, the decision procedure for using a builtin `ParMap` is the same as
 the decision procedure for using a reflective `ParMap`.
 
-If you have any questions about the benchmarks, I'd be happy to answer them in 
+If you have any questions about the benchmarks, I'd be happy to answer them in
 the comments.
 
 

@@ -389,7 +389,7 @@ strong, .bold {
 }
 @media screen and (min-width: 64em) {
   .p-responsive {
-    padding: 4rem;
+    padding: 1rem 4rem 4rem 4rem;
   }
 
   .px-responsive {

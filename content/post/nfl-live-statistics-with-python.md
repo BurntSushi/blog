@@ -1,0 +1,297 @@
++++
+date = "2012-08-30T00:45:00-05:00"
+draft = false
+title = "Introducing NFLGame: Programmatic access to live NFL game statistics"
+author = "Andrew Gallant"
+url = "nfl-live-statistics-with-python"
++++
+
+As a programmer and a fantasy football addict, I am embarassed by the means
+through which we must expend ourselves to get data in a machine readable form.
+This lack of open source software cripples the community with sub-standard
+tools, and most importantly, detracts from some really cool and fun things that
+could be done with easily available statistics. Many tools are either out-dated
+or broken, or if they work, they are closed source and often cost money.
+
+Yesterday I started work on a new library package that I hope will start to
+improve this sorry state of affairs.
+
+<!--more-->
+
+[nflgame](https://github.com/BurntSushi/nflgame) is a [Python
+package](http://pypi.python.org/pypi/nflgame/) that provides convenient access
+to NFL statistics. This includes games that are currently being played, or
+games as far back as the 2009 season.
+
+nflgame works by reading [a JSON
+feed](http://www.nfl.com/liveupdate/game-center/2012010101/2012010101_gtd.json)
+that powers [NFL.com's live
+GameCenter](http://www.nfl.com/gamecenter/2012010101/2011/REG17/bills@patriots).
+
+Since game statistics [never change after a game has been
+played](http://thefanhub.com/posts/detail/117783/NFL-stat-corrections-are-a-joke),
+the JSON data is automatically cached and saved to disk if the game is no
+longer being played. The next time statistics for that game are queried, the
+data will be read from disk. (nflgame comes preloaded with data from every game
+in the pre- and regular season since 2009.)
+
+The [API](http://burntsushi.net/doc/nflgame/) for nflgame is small and
+hopefully easy to use&mdash;even for those without much or any experience
+programming.
+
+### Teaser
+
+Let's start off with a quick teaser to showcase some of nflgame's power.
+
+Who lead the league in rushing between weeks 10 and 14 of the 2010 regular
+season?
+
+I won't make you hunt down the answer. Here's five lines of code that lists the
+top ten rushers in weeks 10-14 of the 2009 season:
+
+```python
+>>> import nflgame
+>>> games = nflgame.games(2010, week=[10, 11, 12, 13, 14])
+>>> players = nflgame.combine(games)
+>>> for p in players.rushing().sort("rushing_yds").limit(10):
+...     print p, p.rushing_yds
+...
+...
+M.Jones-Drew 632
+M.Turner 480
+A.Foster 466
+F.Jackson 462
+K.Moreno 462
+J.Charles 458
+P.Hillis 426
+C.Johnson 416
+S.Jackson 405
+B.Green-Ellis 401
+```
+
+### Back to basics
+
+If you are a beginning programmer (or don't have any experience programming), I
+**strongly** urge you to read my [Tutorial for non programmers: Installation
+and
+examples](https://github.com/BurntSushi/nflgame/wiki/Tutorial-for-non-programmers:-Installation-and-examples).
+What follows is a condensed version of the tutorial that might be a
+bit too confusing for those without programming experience.
+
+nflgame is designed around three core concepts: games, players and lists of
+players (that are implemented as Python generators). Games can be selected
+based on season, week and team. Players in each game can then be accessed by
+name, statistical categories (i.e., passing, rushing, defense, etc.), or even
+statistical values&mdash;such as finding all players in a list with at least
+one receiving touchdown.
+
+Games can be selected one at a time:
+
+```python
+>>> import nflgame
+>>> buf_at_ne = nflgame.one(2011, 17, "NE", "BUF")
+```
+
+Or in bulk (every game in the 2009 season):
+
+```python
+>>> import nflgame
+>>> season09 = nflgame.games(2009)
+```
+
+Each game comes with its own `players` attribute that holds player statistics
+for every player that participated in the game. Additionally, games have
+attributes like `winner`, `home`, `away`, `score_home`, `score_away` and
+`clock` that report meta-information about the game itself.
+
+So to get every player with at least one passing statistic in a game:
+
+```python
+>>> import nflgame
+>>> game = nflgame.one(2011, 17, "NE", "BUF")
+>>> print game.players.passing()
+[B.Hoyer, T.Brady, R.Fitzpatrick]
+```
+
+And the same thing can be done with rushing, receiving, defense, kicking, etc.,
+by simply replacing `passing` with one of the aforementioned.
+```
+
+Each player comes with his own grouping of statistics. To extend upon the
+previous example, consider printing out some passing statistics associated with
+each passer in the game:
+
+```python
+>>> for p in game.players.passing():
+...     print p, p.passing_cmp, p.passing_att, p.passing_yds
+...
+...
+B.Hoyer 1 1 22
+T.Brady 23 35 338
+R.Fitzpatrick 29 46 307
+```
+
+### Filtering, sorting and combining&mdash;oh my!
+
+No data API would be complete without a means of filtering the data according
+to its values.
+
+To find all players on the home team of the current game:
+
+```python
+>>> print game.players.filter(home=True)
+[B.Hoyer, T.Brady, B.Green-Ellis, A.Hernandez, J.Edelman, S.Ridley, D.Woodhead, R.Gronkowski, W.Welker, S.Gostkowski, Z.Mesko, M.Slater, K.Arrington, M.Anderson, J.Mayo, A.Molden, N.Jones, P.
+Chung, B.Deaderick, D.Fletcher, D.McCourty, V.Wilfork, N.Koutouvides, R.Ninkovich, K.Love, L.Polite, B.Spikes, S.Moore]
+```
+
+In this case, New England is the home team, so only players on the Patriots are
+returned.
+
+A more advanced use of `filter` is to use predicates to determine whether a
+particular stat should be filtered or not. For example, here we look at every
+player in the game on the home team with *at least* one interception:
+
+```python
+>>> print game.players.defense().filter(home=True, defense_int=lambda x: x >= 1)
+[A.Molden, D.McCourty, S.Moore]
+```
+
+Any player list can be sorted according to a statistical field. For example, we
+might want to see a list of rushing leaders in the game by yards:
+
+```python
+>>> for p in game.players.rushing().sort("rushing_yds"):
+>>> ...     print p, p.rushing_att, p.rushing_yds
+>>> ...
+>>> ...
+S.Ridley 15 81
+C.Spiller 13 60
+R.Fitzpatrick 5 36
+A.Hernandez 2 26
+B.Green-Ellis 7 22
+J.Edelman 1 6
+G.Wilson 1 6
+D.Woodhead 1 5
+T.Choice 1 4
+B.Hoyer 3 -2
+```
+
+Player statistics for the same player from different games can be combined to
+represent statistics from multiple games. Additionally, player generators can
+be concatenated. This combination allows one to construct searchable player
+generators of any makeup: from only games in a certain week, to all games
+in a season (or multiple seasons!).
+
+For example, to find the top ten rushing leaders from week 2 of the 2009
+season, we simply select all games from that week, combine the games into a
+single player list, and use our familiar searching methods exemplified above to
+get our answer:
+
+```python
+>>> week2 = nflgame.games(2009, 2)
+>>> players = nflgame.combine(week2)
+>>> for p in players.rushing().sort("rushing_yds").limit(10):
+...     print p, p.rushing_att, p.rushing_yds, p.rushing_tds
+...
+...
+F.Gore 16 207 2
+C.Johnson 16 197 2
+F.Jackson 28 163 0
+C.Benson 29 141 0
+R.Brown 24 136 2
+M.Barber 18 124 1
+M.Turner 28 105 1
+S.Jackson 17 104 0
+F.Jones 7 96 1
+A.Peterson 15 92 1
+```
+
+What if you wanted to see who passed for the most touchdowns in the first five
+weeks of the 2011 season?
+
+```python
+>>> games1_5 = nflgame.games(2011, week=[1, 2, 3, 4, 5])
+>>> players = nflgame.combine(games1_5)
+>>> for p in players.passing().sort("passing_tds").limit(10):
+...     print p, p.passing_tds
+...
+...
+T.Brady 13
+A.Rodgers 12
+M.Stafford 11
+D.Brees 10
+R.Fitzpatrick 9
+M.Hasselbeck 8
+E.Manning 8
+K.Orton 8
+J.Flacco 7
+M.Schaub 7
+```
+
+Or how about the receiving leaders for the entire 2009 season?
+
+```python
+>>> season2009 = nflgame.games(2009)
+>>> players = nflgame.combine(season2009)
+>>> for p in players.receiving().sort("receiving_yds").limit(15):
+...     print p, p.receiving_yds, p.receiving_rec, p.receiving_tds
+...
+...
+A.Johnson 1504 95 9
+W.Welker 1336 122 4
+S.Holmes 1243 78 4
+R.Wayne 1243 95 10
+M.Austin 1230 74 11
+S.Rice 1200 78 6
+R.Moss 1189 78 13
+S.Smith 1163 97 7
+A.Gates 1145 78 7
+D.Jackson 1120 60 9
+H.Ward 1106 87 6
+V.Jackson 1097 63 9
+G.Jennings 1091 66 4
+R.White 1087 79 10
+B.Marshall 1081 93 10
+```
+
+Finally, with any of the above examples, you can export the statistics to a
+CSV file that can be read by Excel. For example, to export the entire 2011
+season in just a single line:
+
+```python
+>>> nflgame.combine(nflgame.games(2011)).csv("2011.csv")
+```
+
+### What's next?
+
+For the short-term, I'd really like to come up with an easy and elegant way of
+providing alerts (emails and texts) for your fantasy football team. For
+example, whenever a player on your team&mdash;or your opponent's
+team&mdash;scores a lot of points like a touchdown or a field goal. I did
+something like this last year using a cobbled together hack-job that I'm
+ashamed of, and it was a lot of fun. (I did screen scraping on the ESPN fantasy
+web site for all the statistics.)
+
+The real problem here is keeping your roster up to date. It's pretty easy if
+you're using Yahoo because of their [Fantasy Sports
+API](http://developer.yahoo.com/fantasysports/guide/), but I don't think any
+other league web site offers such amenities.
+
+In the long-term, nflgame could certainly be the statistical back-bone for
+fantasy football league software. But I don't think that's on my personal radar
+any time soon.
+
+I am aware of [phpFFL](http://www.phpffl.com/forums/index.php), which purports
+to be open source fantasy football league software&mdash;but development seems
+to have stalled. (It also looks like they are screen scraping CBS Sports for
+statistics, which I really want to avoid.) Plus, I vowed a long time ago never
+to take up another serious project in PHP again. I value my mental health too
+highly.
+
+### Links
+
+* [Tutorial for non programmers: Installation and examples](https://github.com/BurntSushi/nflgame/wiki/Tutorial-for-non-programmers:-Installation-and-examples)
+* [PyPI package page](http://pypi.python.org/pypi/nflgame/)
+* [github project page](https://github.com/BurntSushi/nflgame)
+* [Archlinux user repository package page](https://aur.archlinux.org/packages.php?ID=62381)
+
