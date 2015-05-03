@@ -9,7 +9,7 @@ engineer for [Diffeo](http://diffeo.com/) in
 where I get to work on a variety of
 things from machine learning algorithms to core infrastructure and user facing
 applications. The vast majority of my free time is spent hacking on
-[side projects](/projects).
+[side projects](/projects/).
 
 You may find me in other mediums under the handle `burntsushi`.
 
@@ -25,7 +25,9 @@ mainstream American cousine.
 
 I occasionally allow myself to get sucked into pointless debates online.
 
-I hate cities because of their population density.
+I dislike living in a city more than I dislike commuting. I dislike cities
+because of their population density. (This comment may seem out of place,
+but most people are baffled at my distaste for urban life.)
 
 
 ### Contact
