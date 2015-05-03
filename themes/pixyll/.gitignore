@@ -1,7 +1,0 @@
-*.swp
-*.swo
-
-hugo
-public/*
-content/*
-config.*

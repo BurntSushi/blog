@@ -1,6 +1,0 @@
-author = "Dmitriy Slupytskyi"
-description = "A simple, beautiful theme for Hugo."
-license = "MIT"
-name = "hugo-theme-pixyll"
-source_repo = "https://github.com/azmelanar/hugo-theme-pixyll"
-tags = ["blog", "personal"]
