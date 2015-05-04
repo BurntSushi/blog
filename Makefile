@@ -8,3 +8,6 @@ deploy:
 clean:
 	rm -rf public
 
+push:
+	git push origin master
+	git push github master
