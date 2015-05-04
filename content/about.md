@@ -35,5 +35,5 @@ but most people are baffled at my distaste for urban life.)
 I currently live with my girlfriend, Kaitlyn Brady, in Westborough, MA.
 
 If you wish to contact me, you may email me:
-![Andrew Gallant's email address](http://burntsushi.net/images/gmail.png)
+![Andrew Gallant's email address](/images/gmail.png)
 

@@ -222,11 +222,28 @@ code {
   color: #7a7a7a;
 }
 
-pre {
-  padding: 1.125em;
-  font-size: 1rem;
+table.highlighttable, div.highlight {
+  border: 1px solid #000;
+  width: 100%;
+  border-spacing: 0;
+}
+
+table.highlighttable div.highlight {
+  border: 0;
+}
+
+table.highlighttable td .linenodiv {
+  padding-right: 0 !important;
+}
+
+table.highlighttable td .linenodiv pre, .highlight pre {
+  padding: 0.5em 0 0.5em 5px;
+  font-size: 1.15rem;
   line-height: 1.11;
-  margin-bottom: 0.88em;
+}
+
+table.highlighttable td .linenodiv pre {
+  padding-left: 10px;
 }
 
 .highlight .p {
@@ -234,11 +251,19 @@ pre {
   line-height: 1;
 }
 
+.hljs {
+  font-size: 1rem;
+}
+
 blockquote {
-  padding: 1.33em;
+  padding: 0.5em;
   font-style: italic;
   border-left: 5px solid #7a7a7a;
 }
+
+  blockquote p {
+    margin: 0;
+  }
 
 blockquote footer {
   font-size: .85rem;

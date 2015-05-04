@@ -115,7 +115,6 @@ So to get every player with at least one passing statistic in a game:
 
 And the same thing can be done with rushing, receiving, defense, kicking, etc.,
 by simply replacing `passing` with one of the aforementioned.
-```
 
 Each player comes with his own grouping of statistics. To extend upon the
 previous example, consider printing out some passing statistics associated with

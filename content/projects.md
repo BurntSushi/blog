@@ -37,6 +37,9 @@ This provides convenient type-based encoding and decoding of CSV data. It is
 also extremely fast. It should be on par with the performance of
 [`libcsv`](http://sourceforge.net/projects/libcsv/).
 
+There are some rough benchmarks [demonstrating its
+performance](https://bitbucket.org/ewanhiggs/csv-game).
+
 #### [xsv](https://github.com/BurntSushi/xsv)
 
 A command line swiss army knife for working with CSV data. It supports basic
@@ -66,6 +69,11 @@ on Unicode codepoints *and* is convenient to use.
 An easy to use writer for aligning columns of data on the command line. This is
 a simple port of [Go's `text/tabwriter`](http://golang.org/pkg/text/tabwriter/)
 package.
+
+#### [byteorder](https://github.com/BurntSushi/byteorder)
+
+A simple crate for reading and writing integers in a binary format. Its purpose
+is to handle endianness conversions automatically.
 
 
 ### Go projects
@@ -165,3 +173,21 @@ command line utility for searching and loading plays into a VLC playlist.
 A single user web application for viewing your fantasy teams scores while games
 are playing. It also allows you to query for any statistic back to 2009 and
 watch the corresponding play footage.
+
+
+### Other projects
+
+These projects just don't fit in the above categories.
+
+#### [pdoc](https://github.com/BurntSushi/pdoc)
+
+An automatic documentation tool for Python. I think Sphinx is far too
+complicated and too painful to use. `epydoc` was my go to tool for a long time,
+but the code has been abandoned and is not Python 3 compatible. `pdoc` is meant
+to be its replacement. [It's also beautiful.](http://pdoc.burntsushi.net/nfldb)
+
+#### [erd](https://github.com/BurntSushi/erd)
+
+An Entity-Relationship diagram generator written in Haskell. It takes a plain
+text description of your relational schema and converts it to a pretty diagram
+using GraphViz.
