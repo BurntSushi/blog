@@ -1,5 +1,5 @@
 +++
-date = "2014-04-21T19:51:00-05:00"
+date = "2014-04-21T19:51:00-04:00"
 draft = false
 title = "Syntax extensions and regular expressions for Rust"
 author = "Andrew Gallant"

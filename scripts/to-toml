@@ -1,0 +1,11 @@
+#!/usr/bin/env python2
+
+from __future__ import absolute_import, division, print_function
+import os.path as path
+import sys
+
+
+if __name__ == '__main__':
+    for f in sys.argv[1:]:
+        name = path.splitext(path.basename(f))[0]
+        print('%s = """\n%s\n"""' % (name, open(f).read().strip()))
