@@ -1,7 +1,8 @@
 baseurl = "http://blog.burntsushi.net/"
 languageCode = "en-us"
 title = "Andrew Gallant's Blog"
-pygmentsstyle = "autumn"
+pygmentsuseclasses = true
+# pygmentsstyle = "autumn"  # not actually used
 
 [params]
 author = "Andrew Gallant"

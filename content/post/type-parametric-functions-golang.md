@@ -34,7 +34,7 @@ types of their arguments.
 If Go had parametric polymorphism available to users, here's what a `Map`
 function *might* look like:
 
-{{< highlight go "linenos=table" >}}
+{{< highlight go "classprefix=pyg-" >}}
 // Forall A, B ...
 func Map(f func(A) B, xs []A) []B {
     ys := make([]B, len(xs))
@@ -92,7 +92,7 @@ the value's underlying type, which we will exploit later.
 
 Let's start with writing `Map` using `interface{}`:
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 func Map(f func(interface{}) interface{}, xs []interface{}) []interface{} {
   ys := make([]interface{}, len(xs))
   for i, x := range xs {
@@ -104,7 +104,7 @@ func Map(f func(interface{}) interface{}, xs []interface{}) []interface{} {
 
 This part isn't so bad, but the burden on the caller is outrageous:
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 square := func(x interface{}) interface{} {
   return x.(int) * x.(int)
 }
@@ -133,7 +133,7 @@ With regard to run time type safety, most of it is contained inside the
 user-supplied `f` function, but error messages don't address the underlying
 cause. For example, the following code
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 Map(func(a interface{}) interface{} { return len(a.(string)) },
     []interface{}{1, 2, 3})
 {{< /highlight >}}
@@ -166,7 +166,7 @@ We wield this power by exploiting the fact that `interface{}` values still
 contain information about the underlying type of the value it contains. But
 this exploitation comes with the price of a more painful `Map` function:
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 func Map(f interface{}, xs interface{}) []interface{} {
   vf := reflect.ValueOf(f)
   vxs := reflect.ValueOf(xs)
@@ -196,7 +196,7 @@ package to operate on the structure of those unknown values.
 In particular, we've given up some compile time type safety in exchange for
 lifting some burdens from the caller:
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 square := func(x int) int {
   return x * x
 }
@@ -236,7 +236,7 @@ This now allows us to write a `Map` function that uses the return type of `f`
 to construct a new slice type, which we can then populate and return to the
 caller.
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 func Map(f interface{}, xs interface{}) interface{} {
   vf := reflect.ValueOf(f)
   vxs := reflect.ValueOf(xs)
@@ -257,7 +257,7 @@ Our `Map` function has gotten a bit more annoying, but after practice with the
 Go operation. On the bright side, the caller's obligations have dropped to
 nearly the level that we saw with the first generic `Map` example:
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 squared := Map(func(x int) int { return x * x }, []int{1, 2, 3}).([]int)
 {{< /highlight >}}
 
@@ -274,7 +274,7 @@ The most recent iteration of the `Map` function is annoying to write, but not
 when we try to subvert the parametric type of `Map`
 (which is `func(func(A) B, []A) []B`) by running this code:
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 Map(func(a string) int { return len(a) }, []int{1, 2, 3}).([]int)
 {{< /highlight >}}
 
@@ -300,7 +300,7 @@ correspond to *any* type, we need to be exhaustive in our checking:
 Given those invariants, here's a `Map` function that enforces them and produces
 sane error messages. (I leave it to the reader to imagine better ones.)
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 func Map(f interface{}, xs interface{}) interface{} {
   vf := reflect.ValueOf(f)
   vxs := reflect.ValueOf(xs)
@@ -344,7 +344,7 @@ func Map(f interface{}, xs interface{}) interface{} {
 
 The result is a lot of pain, but when one tries to subvert its type
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 Map(func(a string) int { return len(a) }, []int{1, 2, 3}).([]int)
 {{< /highlight >}}
 
@@ -392,7 +392,7 @@ Assume that all types with the `Go` prefix are real Go types like `int`,
 
 So that if `Map` is invoked like so
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 strlen := func(s string) int { return len(s) }
 lens := Map(strlen, []string{"abc", "ab", "a"}).([]int)
 {{< /highlight >}}
@@ -412,7 +412,7 @@ containing the substitutions.
 
 Here's the code:
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 // Map has a parametric type:
 //
 //  func Map(f func(A) B, xs []A) []B
@@ -438,7 +438,7 @@ func Map(f, xs interface{}) interface{} {
 The latter half of the function is something you ought to be deeply familiar
 with by now. But the first parts of the function are new and worth inspection:
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 chk := ty.Check(
   new(func(func(ty.A) ty.B, []ty.A) []ty.B),
   f, xs)
@@ -452,7 +452,7 @@ But wait. How am I writing a parametric type in Go? The trick is to define
 a type that can never be equal to any other type unless explicitly declared to
 be:
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 type TypeVariable struct {
     noImitation struct{}
 }
@@ -464,7 +464,7 @@ type B TypeVariable
 And by convention, the `ty.Check` function interprets those types (and only
 those types) to be parametric. You may define your own type variables too:
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 type K ty.TypeVariable
 type V ty.TypeVariable
 {{< /highlight >}}
@@ -478,7 +478,7 @@ there is a bug in `ty.Check`.
 Let's test that invariant. Using the above definition of `Map`, if one tries to
 run this code
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 Map(func(a string) int { return len(a) }, []int{1, 2, 3}).([]int)
 {{< /highlight >}}
 
@@ -498,7 +498,7 @@ type 'string' but got 'int'.
 
 Sure. Let's take a look at how to shuffle *any* slice in place.
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 // Shuffle has a parametric type:
 //
 //  func Shuffle(xs []A)
@@ -530,7 +530,7 @@ func Shuffle(xs interface{}) {
 Or an implementation of set union, where a set is a map from any type that
 can be a key to a bool:
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 // Union has a parametric type:
 //
 //  func Union(a map[A]bool, b map[A]bool) map[A]bool
@@ -557,7 +557,7 @@ func Union(a, b interface{}) interface{} {
 
 Which can be used like so:
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 A := map[string]bool{
   "springsteen": true,
   "j. geils": true,
@@ -580,7 +580,7 @@ AandB := Union(A, B).(map[string]bool)
 Here's a quick example of memoizing a recursive function that I think is
 pretty cool:
 
-{{< highlight go >}}
+{{< highlight go "classprefix=pyg-" >}}
 // Memoizing a recursive function like `fibonacci`:
 // Write it like normal.
 var fib func(n int64) int64

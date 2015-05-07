@@ -2,10 +2,41 @@
 
 from __future__ import absolute_import, division, print_function
 import os.path as path
+import re
 import sys
+
+
+def extract_code(code):
+    try:
+        lang, command = get_lang_command(code)
+    except ValueError:
+        return code
+    if lang == 'rust' and command == 'only-main':
+        return extract_rust_main(code)
+
+
+def get_lang_command(code):
+    lines = code.splitlines()
+    if len(lines) == 0:
+        raise ValueError('No code')
+    m = re.search('^//(?P<lang>\S+)\s+(?P<cmd>\S+)$', lines[0])
+    if m is None:
+        raise ValueError('No lang or command in first line')
+    return m.group('lang').lower(), m.group('cmd').lower()
+
+
+def extract_rust_main(code):
+    rcode = re.compile(r'fn main\(\) \{\n(?P<code>.+)\n\}(\n|$)', re.DOTALL)
+    main = rcode.search(code).group('code')
+    return re.subn('^( {4}| {2})', '', main, flags=re.MULTILINE)[0]
+
+
+def eprint(*args, **kwargs):
+    print(*args, **dict(kwargs, **{'file': sys.stderr}))
 
 
 if __name__ == '__main__':
     for f in sys.argv[1:]:
         name = path.splitext(path.basename(f))[0]
-        print('%s = """\n%s\n"""' % (name, open(f).read().strip()))
+        code = extract_code(open(f).read().strip())
+        print("%s = '''\n%s\n'''" % (name, code))

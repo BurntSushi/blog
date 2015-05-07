@@ -32,5 +32,8 @@ idioms yet.
 All code samples in this post compile with Rust `1.0.0-beta.4`. They should
 continue to work as Rust 1.0 stable is released.
 
+All code can be found and compiled in
+[my blog's repository](https://github.com/BurntSushi/blog/tree/master/code/rust-error-handling).
+
 {{< code "rust" "rusterrorhandling" "01-unwrap" >}}
 

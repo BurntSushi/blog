@@ -2,3 +2,8 @@
 name = "rust-error-handling"
 version = "0.1.0"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
+
+[dependencies]
+csv = "*"
+regex = "*"
+rustc-serialize = "*"
