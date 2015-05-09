@@ -51,11 +51,11 @@ standard library.
 If you'd like to run any of the code samples below, then the following should
 work:
 
-{{< highlight sh "classprefix=pyg-" >}}
+{{< high sh >}}
 $ git clone git://github.com/BurntSushi/blog
 $ cd blog/code/rust-error-handling
 $ cargo run --bin NAME-OF-CODE-SAMPLE [ args ... ]
-{{< /highlight >}}
+{{< /high >}}
 
 Each code sample is labeled with its name.
 
@@ -77,20 +77,33 @@ could [`panic`](http://doc.rust-lang.org/std/macro.panic!.html) whenever we
 come across something unexpected. (`panic` causes the current task to unwind,
 and in most cases, the entire program aborts.) Here's an example:
 
-{{< code "rust" "rusterrorhandling" "panic-simple" >}}
+{{< code-rust "panic-simple" >}}
+// Guess a number between 1 and 10.
+// If it matches the number I had in mind, return true. Else, return false.
+fn guess(n: i32) -> bool {
+    if n < 1 || n > 10 {
+        panic!("Invalid number: {}", n);
+    }
+    n == 5
+}
+
+fn main() {
+    guess(11);
+}
+{{< /code-rust >}}
 
 (If you like, it's easy to [run this code](#run-the-code).)
 
 If you try running this code, the program will crash with a message like this:
 
-{{< highlight sh "classprefix=pyg-" >}}
+{{< high sh  >}}
 thread '<main>' panicked at 'Invalid number: 11', src/bin/panic-simple.rs:5
-{{< /highlight >}}
+{{< /high >}}
 
 Here's another example that is slightly less contrived. A program that accepts
 an integer as an argument, doubles it and prints it.
 
-{{< code-rust "rusterrorhandling" "unwrap-double" >}}
+{{< code-rust "unwrap-double" >}}
 use std::env;
 
 fn main() {
