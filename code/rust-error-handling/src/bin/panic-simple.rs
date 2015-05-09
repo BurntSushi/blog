@@ -1,3 +1,4 @@
+
 // Guess a number between 1 and 10.
 // If it matches the number I had in mind, return true. Else, return false.
 fn guess(n: i32) -> bool {
@@ -10,3 +11,4 @@ fn guess(n: i32) -> bool {
 fn main() {
     guess(11);
 }
+
