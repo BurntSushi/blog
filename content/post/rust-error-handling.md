@@ -25,7 +25,8 @@ article will explore those stumbling blocks and demonstrate how to use the
 standard library to make error handling concise and ergonomic.
 
 **Target audience**: Those new to Rust that don't know its error handling
-idioms yet.
+idioms yet. Some familiarity with Rust is helpful (e.g., this article will make
+use of traits and closures).
 
 <!--more-->
 
@@ -79,8 +80,12 @@ Basics" entirely.
     * [The `Result` type](#the-result-type)
         * [Parsing integers](#parsing-integers)
         * [The `Result` type alias idiom](#the-result-type-alias-idiom)
-    * [Composing `Option` and `Result`](#composing-option-and-result)
     * [A brief interlude: unwrapping isn't evil](#a-brief-interlude-unwrapping-isn-t-evil)
+* [Working with multiple error types](#working-with-multiple-error-types)
+    * [Composing `Option` and `Result`](#composing-option-and-result)
+    * [The limits of combinators](#the-limits-of-combinators)
+    * [Early returns](#early-returns)
+    * [The `try!` macro](#the-try-macro)
 * [The `Error` trait](#the-error-trait)
 * [The `From` trait and the `try!` macro](#the-from-trait-and-the-try-macro)
 
@@ -628,6 +633,54 @@ module's type alias instead of the plain definition from `std::result`.
 [`fmt::Result`](http://doc.rust-lang.org/std/fmt/type.Result.html).)
 
 
+### A brief interlude: unwrapping isn't evil
+
+If you've been following along, you might have noticed that I've taken a pretty
+hard line against calling methods like `unwrap` that could `panic` and abort
+your program. *Generally speaking*, this is good advice.
+
+However, `unwrap` can still be used judiciously. What exactly justifies use of
+`unwrap` is somewhat of a grey area and reasonable people can disagree. I'll
+summarize some of my *opinions* on the matter.
+
+* **In examples and quick 'n' dirty code.** Sometimes you're writing examples
+  or a quick program, and error handling simply isn't important. Beating the
+  convenience of `unwrap` can be hard in such scenarios, so it is very
+  appealing.
+* **When panicing indicates a bug in the program.** When the invariants of your
+  code should prevent a certain case from happening (like, say, popping from an
+  empty stack), then panicing can be permissible. This is because it exposes a
+  bug in your program. This can be explicit as a result from an `assert!`
+  failing, or it could be because your index into an array was out of bounds.
+
+This is probably not an exhaustive list. Moreover, when using an `Option`, it
+is often better to use its
+[`expect`](http://doc.rust-lang.org/std/option/enum.Option.html#method.expect)
+method. `expect` does exactly the same thing as `unwrap`, except it prints a
+message you give to `expect`. This makes the resulting panic a bit nicer to
+deal with, since it will show your message instead of "called unwrap on a
+`None` value."
+
+My advice boils down to this: use good judgment. There's a reason why the words
+"never do X" or "Y is considered harmful" don't appear in my writing. There are
+trade offs to all things, and it is up to you as the programmer to determine
+what is acceptable for your use cases. My goal is only to help you evaluate
+trade offs as accurately as possible.
+
+Now that we've covered the basics of error handling in Rust, and I've said my
+piece about unwrapping, let's start exploring more of the standard library.
+
+
+## Working with multiple error types
+
+Thus far, we've looked at error handling where everything was either an
+`Option<T>` or a `Result<T, SomeError>`. But what happens when you have both an
+`Option` and a `Result`? Or what if you have a `Result<T, Error1>` and a
+`Result<T, Error2>`? Handling *composition of distinct error types* is the next
+challenge in front of us, and it will be the major theme throughout the rest of
+this article.
+
+
 ### Composing `Option` and `Result`
 
 So far, I've talked about combinators defined for `Option` and combinators
@@ -706,44 +759,213 @@ returned unmodified.
 We use `map_err` here because it is necessary for the error types to remain
 the same (because of our use of `and_then`). Since we chose to convert the
 `Option<String>` (from `argv.nth(1)`) to a `Result<String, String>`, we must
-also convert the `ParseIntError` from `arg.parse()` to a `String`. As we'll see
-in the section on [the `Error` trait](#the-error-trait), we can do a bit better
-than representing errors as plain strings. In particular, we potentially lost
-information by converting `ParseIntError` to a `String`. What if the caller
-wanted to inspect that particular error case? Certainly, inspect the error as a
-`String` is not a robust way to do it.
+also convert the `ParseIntError` from `arg.parse()` to a `String`.
 
 
-### A brief interlude: unwrapping isn't evil
+### The limits of combinators
 
-If you've been following along, you might have noticed that I've taken a pretty
-hard line against calling methods like `unwrap` that could `panic` and abort
-your program. *Generally speaking*, this is good advice.
+Doing IO and parsing input is a very common task, and it's one that I
+personally have done a lot of in Rust. Therefore, we will use (and continue to
+use) IO and various parsing routines to exemplify error handling.
 
-However, `unwrap` can still be used judiciously. What exactly justifies use of
-`unwrap` is somewhat of a grey area and reasonable people can disagree. I'll
-summarize some of my *opinions* on the matter.
+Let's start simple. We are tasked with opening a file, reading all of its
+contents and converting its contents to a number. Then we multiply it by `2`
+and print the output.
 
-* **In examples and quick 'n' dirty code.** Sometimes you're writing examples
-  or a quick program, and error handling simply isn't important. Beating the
-  convenience of `unwrap` can be hard in such scenarios, so it is very
-  appealing.
-* **When panicing indicates a bug in the program.** When the invariants of your
-  code should prevent a certain case from happening (like, say, popping from an
-  empty stack), then panicing can be permissible. This is because it exposes a
-  bug in your program. This can be explicit as a result from an `assert!`
-  failing, or it could be because your index into an array was out of bounds.
+Although I've tried to convince you not to use `unwrap`, it can be useful
+to first write your code using `unwrap`. It allows you to focus on your problem
+instead of the error handling, and it exposes the points where proper error
+handling need to occur. Let's start there so we can get a handle on the code,
+and then refactor it to use better error handling.
 
-This is probably not an exhaustive list.
+{{< code-rust "io-basic-unwrap" >}}
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 
-My advice boils down to this: use good judgment. There's a reason why the words
-"never do X" or "Y is considered harmful" don't appear in my writing. There are
-trade offs to all things, and it is up to you as the programmer to determine
-what is acceptable for your use cases. My goal is only to help you evaluate
-trade offs as accurately as possible.
+fn file_double<P: AsRef<Path>>(file_path: P) -> i32 {
+    let mut file = File::open(file_path).unwrap(); // error 1
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).unwrap(); // error 2
+    let n: i32 = contents.trim().parse().unwrap(); // error 3
+    2 * n
+}
 
-Now that we've covered the basics of error handling in Rust, and I've said my
-piece about unwrapping, let's start exploring more of the standard library.
+fn main() {
+    let doubled = file_double("foobar");
+    println!("{}", doubled);
+}
+{{< /code-rust >}}
+
+(N.B. The `AsRef<Path>` is used because those are the
+[same bounds used on
+`std::fs::File::open`](http://doc.rust-lang.org/std/fs/struct.File.html#method.open).
+This makes it ergnomic to use any kind of string as a file path.)
+
+There are three different errors that can occur here:
+
+1. A problem opening the file.
+2. A problem reading data from the file.
+3. A problem parsing the data as a number.
+
+The first two problems are described via the
+[`std::io::Error`](http://doc.rust-lang.org/std/io/struct.Error.html) type.
+We know this because of the return types of
+[`std::fs::File::open`](http://doc.rust-lang.org/std/fs/struct.File.html#method.open)
+and
+[`std::io::Read::read_to_string`](http://doc.rust-lang.org/std/io/trait.Read.html#method.read_to_string).
+(Note that they both use the
+[`Result` type alias idiom](#the-result-type-alias-idiom)
+described previously. If you click on the `Result` type, you'll
+[see the type alias](http://doc.rust-lang.org/std/io/type.Result.html), and
+consequently, the underlying `io::Error` type.)
+The third problem is described by the
+[`std::num::ParseIntError`](http://doc.rust-lang.org/std/num/struct.ParseIntError.html)
+type. The `io::Error` type in particular is *pervasive* throughout the standard
+library. You will see it again and again.
+
+Let's start the process of refactoring the `file_double` function. To make this
+function composable with other components of the program, it should *not* panic
+if any of the above error conditions are met. Effectively, this means that the
+function should *return an error* if any of its operations fail. Our problem is
+that the return type of `file_double` is `i32`, which does not give us any
+useful way of reporting an error. Thus, we must start by changing the return
+type from `i32` to something else.
+
+The first thing we need to decide: should we use `Option` or `Result`? We
+certainly could use `Option` very easily. If any of the three errors occur, we
+could simply return `None`. This will work *and it is better than panicing*,
+but we can do a lot better. Instead, we should pass some detail about the error
+that occurred. This means we should use `Result<i32, E> But what should `E` be?
+Since two *different* types of errors can occur, we need to convert them to a
+common type. One such type is `String`. Let's see how that impacts our code:
+
+{{< code-rust "io-basic-error-string" >}}
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
+
+fn file_double<P: AsRef<Path>>(file_path: P) -> Result<i32, String> {
+    File::open(file_path)
+         .map_err(|err| err.to_string())
+         .and_then(|mut file| {
+              let mut contents = String::new();
+              file.read_to_string(&mut contents)
+                  .map_err(|err| err.to_string())
+                  .map(|_| contents)
+         })
+         .and_then(|contents| {
+              contents.trim().parse::<i32>()
+                      .map_err(|err| err.to_string())
+         })
+         .map(|n| 2 * n)
+}
+
+fn main() {
+    match file_double("foobar") {
+        Ok(n) => println!("{}", n),
+        Err(err) => println!("Error: {}", err),
+    }
+}
+{{< /code-rust >}}
+
+This code looks a bit hairy. It can take quite a bit of practice before code
+like this becomes easy to write. The way I write it is by *following the
+types*. As soon as I changed the return type of `file_double` to
+`Result<i32, String>`, I had to start looking for the right combinators. In
+this case, we only used three different combinators: `and_then`, `map` and
+`map_err`.
+
+`and_then` is used to chain multiple computations where each computation could
+return an error. After opening the file, there are two more computations that
+could fail: reading from the file and parsing the contents as a number.
+Correspondingly, there are two calls to `and_then`.
+
+`map` is used to apply a function to the `Ok(...)` value of a `Result`. For
+example, the very last call to `map` multiplies the `Ok(...)` value (which is
+an `i32`) by `2`. If an error had occurred before that point, this operation
+would have been skipped because of how `map` is defined.
+
+`map_err` is the trick the makes all of this work. `map_err` is just like
+`map`, except it applies a function to the `Err(...)` value of a `Result`. In
+this case, we want to convert all of our errors to one type: `String`. Since
+both `io::Error` and `num::ParseIntError` implement `ToString`, we can call the
+`to_string()` method to convert them.
+
+With all of that said, the code is still hairy. Mastering use of combinators is
+important, but they have their limits. Let's try a different approach: early
+returns.
+
+
+### Early returns
+
+I'd like to take the code from the previous section and rewrite it using *early
+returns*. Early returns let you exit the function early. We can't return early
+in `file_double` from inside another closure, so we'll need to revert back to
+explicit case analysis.
+
+{{< code-rust "io-basic-error-string-early-return" >}}
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
+
+fn file_double<P: AsRef<Path>>(file_path: P) -> Result<i32, String> {
+    let mut file = match File::open(file_path) {
+        Ok(file) => file,
+        Err(err) => return Err(err.to_string()),
+    };
+    let mut contents = String::new();
+    if let Err(err) = file.read_to_string(&mut contents) {
+        return Err(err.to_string());
+    }
+    let n: i32 = match contents.trim().parse() {
+        Ok(n) => n,
+        Err(err) => return Err(err.to_string()),
+    };
+    Ok(2 * n)
+}
+
+fn main() {
+    match file_double("foobar") {
+        Ok(n) => println!("{}", n),
+        Err(err) => println!("Error: {}", err),
+    }
+}
+{{< /code-rust >}}
+
+Reasonable people can disagree over whether this code is better that the code
+that uses combinators, but if you aren't familiar with the combinator approach,
+this code looks simpler to read to me. It uses explicit case analysis with
+`match` and `if let`. If an error occurs, it simply stops executing the
+function and returns the error (by converting it to a string).
+
+Isn't this a step backwards though? Previously, I said that the key to
+ergonomic error handling is reducing explicit case analysis, yet we've reverted
+back to explicit case analysis here. It turns out, there are *multiple* ways to
+reduce explicit case analysis. Combinators aren't the only way.
+
+
+### The `try!` macro
+
+A cornerstone of error handling in Rust is the `try!` macro. The `try!` macro
+abstracts case analysis just like combinators, but unlike combinators, it also
+abstracts *control flow*. Namely, it can abstract the *early return* pattern
+seen above.
+
+Here is a simplified definition of a `try!` macro:
+
+{{< code-rust "try-def-simple" >}}
+macro_rules! try {
+    ($e:expr) => (match $e {
+        Ok(val) => val,
+        Err(err) => return Err(err),
+    });
+}
+{{< /code-rust >}}
+
+(The
+[real definition](http://doc.rust-lang.org/std/macro.try!.html)
+is a bit more sophisticated. We will address that later.)
 
 
 ## The `Error` trait
