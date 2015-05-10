@@ -737,13 +737,13 @@ summarize some of my *opinions* on the matter.
 This is probably not an exhaustive list.
 
 My advice boils down to this: use good judgment. There's a reason why the words
-"never do X" or "Y is consider harmful" don't appear in my writing. There are
+"never do X" or "Y is considered harmful" don't appear in my writing. There are
 trade offs to all things, and it is up to you as the programmer to determine
-what's acceptable for your needs. My goal is only to help you evaluate trade
-offs as accurately as possible.
+what is acceptable for your use cases. My goal is only to help you evaluate
+trade offs as accurately as possible.
 
-Now that we've covered the basics of error handling in Rust, let's start
-exploring more of the standard library.
+Now that we've covered the basics of error handling in Rust, and I've said my
+piece about unwrapping, let's start exploring more of the standard library.
 
 
 ## The `Error` trait
@@ -815,8 +815,8 @@ enum CliError {
 This type encodes the two error cases described above. The `NoArguments` value
 constructor has no additional information associated with it because there
 isn't any. The `InvalidNumber` value constructor includes the *evidence* that
-determined the number given by the user was error. This means that when we pass
-our error on to the caller, they can inspect it for as much detail as they
+determined the number given by the user was invalid. This means that when we
+pass our error on to the caller, they can inspect it for as much detail as they
 like. Moreover, the caller can be confident that we didn't arbitrarily leave
 out any error information.
 
@@ -885,18 +885,17 @@ fn main() {
 The code itself doesn't change too much, but in my opinion, the code is a bit
 cleaner without the error messages invading the implementation of `double_arg`.
 Moreover, all of the error messages are lifted out into other places in the
-code.
+code. (This is to my taste.)
 
 Given only this example, it might be difficult to see the justification for
 using the `Error` trait. The code is a bit cleaner, but there's also a lot more
 of it. There are two important things to consider:
 
-1. The proportion of code implementing `Error` in this example is lop-sided
+1. The proportion of code implementing `Error` in this example is lopsided
    because we have only one function producing errors. In real code, you'll
    likely have many functions producing errors.
-2. The use of a generic `Error` trait makes composing errors *of different
-   types* automatically very easy. We'll learn more about this in the next
-   section.
+2. The use of a generic `Error` trait makes automatically composing errors *of
+   different types* very easy. We'll learn more about this in the next section.
 
 
 ## The `From` trait and the `try!` macro
