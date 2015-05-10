@@ -1,4 +1,8 @@
-<div class="named-code">
+{{ if gt (len .Params) 1 }}
+  <div class="named-code" id="code-{{ .Get 0 }}-{{ .Get 1 }}">
+{{ else }}
+  <div class="named-code" id="code-{{ .Get 0 }}">
+{{ end }}
   <span class="named-code-name">{{ .Get 0 }}</span>
   {{ highlight .Inner "rust" "classprefix=pyg-" }}
 </div>

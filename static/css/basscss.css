@@ -18,6 +18,10 @@ h1, h2, h3, h4, h5, h6, p, dl, ol, ul {
   margin-bottom: 1rem;
 }
 
+ol ol, ul ul {
+  margin-bottom: 0;
+}
+
 button, input, select, textarea {
   font-family: inherit;
   font-size: 100%;

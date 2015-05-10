@@ -219,7 +219,15 @@ pre, code {
 }
 
 code {
-  color: #7a7a7a;
+  color: #666;
+}
+
+a code {
+  color: #0096cc;
+}
+
+a:hover code {
+  color: #007199;
 }
 
 table.highlighttable, div.highlight {
@@ -239,7 +247,8 @@ table.highlighttable td .linenodiv {
 table.highlighttable td .linenodiv pre, .highlight pre {
   padding: 1em 10px 1em 10px;
   font-size: 1.15rem;
-  line-height: 1.11;
+  line-height: 1.4;
+  overflow-x: auto;
 }
 
 table.highlighttable td .linenodiv pre {
@@ -292,7 +301,12 @@ h6,
 }
 
 h1 {
+  font-size: 2rem;
+}
+
+h2 {
   font-size: 1.8rem;
+  margin-top: 1.3em;
 }
 
 h3 {
@@ -494,4 +508,6 @@ Copyright (c) 2014 Daniel Eden
     display: block;
     margin-bottom: 2px;
     font-size: 1rem;
+    font-family: monospace;
+    color: #666;
   }

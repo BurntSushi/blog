@@ -3,9 +3,11 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+from collections import defaultdict
 import os
 import os.path as path
 import re
+import shutil
 
 
 CARGO_TOML = '''
@@ -15,10 +17,21 @@ version = "0.1.0"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 '''
 
-RE_RUST_CODE = re.compile(r'^{{< code-rust "(?P<name>[^"]+)" >}}'
+RE_RUST_CODE = re.compile(r'^{{< code-rust "(?P<name>[^"]+)"[^>]*>}}'
                           r'(?P<code>.+?)'
                           r'{{< /code-rust >}}',
                           re.DOTALL | re.MULTILINE)
+
+
+def tweak_code(code):
+    if 'fn main()' not in code:
+        code = code.replace('\n', '\n  ')
+        code = u'fn main() {\n  ' + code.strip() + u'\n}'
+    code = '''
+#![allow(dead_code, unused_imports, unused_variables)]
+''' + code
+    return code.strip()
+
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
@@ -28,7 +41,11 @@ if __name__ == '__main__':
     post_name = path.splitext(path.basename(args.post))[0]
     post = open(args.post).read().decode('utf-8')
     code_dir = path.join('code', post_name)
+    src_bin_dir = path.join(code_dir, 'src', 'bin')
 
+    if os.access(src_bin_dir, os.R_OK):
+        shutil.rmtree(src_bin_dir)
+        os.mkdir(src_bin_dir)
     if not os.access(code_dir, os.R_OK):
         os.mkdir(code_dir)
         os.mkdir(path.join(code_dir, 'src'))
@@ -36,7 +53,10 @@ if __name__ == '__main__':
         print('target', file=open(path.join(code_dir, '.gitignore'), 'w+'))
         print(CARGO_TOML.format(post_name=post_name),
               file=open(path.join(code_dir, 'Cargo.toml'), 'w+'))
+
+    samples = defaultdict(unicode)
     for m in RE_RUST_CODE.finditer(post):
-        src_path = path.join(code_dir, 'src', 'bin',
-                             u'%s.rs' % m.group('name'))
-        print(m.group('code').encode('utf-8'), file=open(src_path, 'w+'))
+        samples[m.group('name')] += m.group('code')
+    for name, code in samples.iteritems():
+        src_path = path.join(code_dir, 'src', 'bin', u'%s.rs' % name)
+        print(tweak_code(code).encode('utf-8'), file=open(src_path, 'w+'))

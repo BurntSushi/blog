@@ -1,0 +1,22 @@
+#!/usr/bin/env python2
+
+from __future__ import absolute_import, division, print_function
+import argparse
+import re
+
+
+RE_HEADING = re.compile('^(?P<level>#+)\s+(?P<title>.+)$', re.MULTILINE)
+
+
+if __name__ == '__main__':
+    p = argparse.ArgumentParser()
+    p.add_argument('post')
+    args = p.parse_args()
+
+    with open(args.post) as f:
+        post = f.read().decode('utf-8')
+        for m in RE_HEADING.finditer(post):
+            level = len(m.group('level')) - 2
+            title = m.group('title').strip()
+            id_name = re.sub('[ \']', '-', re.sub('[`:!]', '', title.lower()))
+            print(('    ' * level) + '* ' + ('[%s](#%s)' % (title, id_name)))

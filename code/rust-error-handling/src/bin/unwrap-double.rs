@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables)]
 
 use std::env;
 
@@ -8,6 +9,5 @@ fn main() {
     println!("{}", 2 * n);
 }
 
-// $ cargo run --bin 01-unwrap 5
+// $ cargo run --bin unwrap-double 5
 // 10
-
