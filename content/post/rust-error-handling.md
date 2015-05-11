@@ -607,8 +607,8 @@ wait,
 [we defined `Result`](#code-result-def-1)
 to have two type parameters. How can we get away with only specifying one? The
 key is to define a `Result` type alias that *fixes* one of the type parameters
-to a particular type. Usually this is the error. For example, our previous
-example parsing integers could be rewritten like this:
+to a particular type. Usually the fixed type is the error type. For example,
+our previous example parsing integers could be rewritten like this:
 
 {{< code-rust "result-num-no-unwrap-map-alias" >}}
 use std::num::ParseIntError;
@@ -836,9 +836,9 @@ The first thing we need to decide: should we use `Option` or `Result`? We
 certainly could use `Option` very easily. If any of the three errors occur, we
 could simply return `None`. This will work *and it is better than panicing*,
 but we can do a lot better. Instead, we should pass some detail about the error
-that occurred. This means we should use `Result<i32, E> But what should `E` be?
-Since two *different* types of errors can occur, we need to convert them to a
-common type. One such type is `String`. Let's see how that impacts our code:
+that occurred. This means we should use `Result<i32, E>`. But what should `E`
+be? Since two *different* types of errors can occur, we need to convert them to
+a common type. One such type is `String`. Let's see how that impacts our code:
 
 {{< code-rust "io-basic-error-string" >}}
 use std::fs::File;
@@ -966,6 +966,153 @@ macro_rules! try {
 (The
 [real definition](http://doc.rust-lang.org/std/macro.try!.html)
 is a bit more sophisticated. We will address that later.)
+
+Using the `try!` macro makes it very easy to simplify our last example. Since
+it does the case analysis and the early return for us, we get tighter code that
+is easier to read:
+
+{{< code-rust "io-basic-error-try" >}}
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
+
+fn file_double<P: AsRef<Path>>(file_path: P) -> Result<i32, String> {
+    let mut file = try!(File::open(file_path).map_err(|e| e.to_string()));
+    let mut contents = String::new();
+    try!(file.read_to_string(&mut contents).map_err(|e| e.to_string()));
+    let n = try!(contents.trim().parse::<i32>().map_err(|e| e.to_string()));
+    Ok(2 * n)
+}
+
+fn main() {
+    match file_double("foobar") {
+        Ok(n) => println!("{}", n),
+        Err(err) => println!("Error: {}", err),
+    }
+}
+{{< /code-rust >}}
+
+The `map_err` calls are still necessary given
+[our definition of `try!`](#code-try-def-simple).
+This is because the error types still need to be converting to `String`.
+The good news is that we can remove those `map_err` calls!
+The bad news is that we will need to learn a bit more about a couple important
+traits in the standard library before we can remove the `map_err` calls.
+
+
+### Defining your own error type
+
+Before we dive into some of the standard library error traits, I'd like to wrap
+up this section by removing the use of `String` as our error type in the
+previous examples.
+
+Using `String` as we did in our previous examples is convenient because it's
+easy to convert errors to strings, or even make up your own errors as strings
+on the spot. However, using `String` for your errors has some downsides.
+
+The first downside is that the error messages tend to clutter your code. It's
+possible to define the error messages elsewhere, but unless you're unusually
+disciplined, it is very tempting to embed the error message into your code.
+Indeed, we did exactly this in a
+[previous example](#code-error-double-string).
+
+The second and more important downside is that `String`s are *lossy*. That is,
+if all errors are converted to strings, then the errors we pass to the caller
+become completely opaque. The only reasonable thing the caller can do with a
+`String` error is show it to the user. Certainly, inspecting the string to
+determine the type of error is not robust. (Admittedly, this downside is far
+more important inside of a library as opposed to, say, an application.)
+
+For example, the `io::Error` type embeds an
+[`io::ErrorKind`](http://doc.rust-lang.org/std/io/enum.ErrorKind.html),
+which is *structured data* that represents what went wrong during an IO
+operation. This can be important because you might want to react differently
+depending on the error. (e.g., A `BrokenPipe` error might mean quitting your
+program gracefully while a `NotFound` error might mean exiting with an error
+code and showing an error to the user.) With `io::ErrorKind`, the caller can
+examine the type of an error with case analysis, which is strictly superior
+than trying to tease out the details of an error inside of a `String`.
+
+Instead of using a `String` as an error type in our previous example of reading
+an integer from a file, we can define our own error type that represents errors
+with *structured data*. We endeavor to not drop information from underlying
+errors in case the caller wants to inspect the details.
+
+The ideal way to represent *one of many possibilities* is to define our own
+sum type using `enum`. In our case, an error is either an `io::Error` or a
+`num::ParseIntError`, so a natural definition arises:
+
+{{< code-rust "io-basic-error-custom" "1" >}}
+// We derive `Debug` because all types should probably derive `Debug`.
+// This gives us a reasonable human readable description of `CliError` values.
+#[derive(Debug)]
+enum CliError {
+    Io(::std::io::Error),
+    Parse(::std::num::ParseIntError),
+}
+{{< /code-rust >}}
+
+Tweaking our code is very easy. Instead of converting errors to strings, we
+simply convert them to our `CliError` type using the corresponding value
+constructor:
+
+{{< code-rust "io-basic-error-custom" "2" >}}
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
+
+fn file_double<P: AsRef<Path>>(file_path: P) -> Result<i32, CliError> {
+    let mut file = try!(File::open(file_path).map_err(CliError::Io));
+    let mut contents = String::new();
+    try!(file.read_to_string(&mut contents).map_err(CliError::Io));
+    let n: i32 = try!(contents.trim().parse().map_err(CliError::Parse));
+    Ok(2 * n)
+}
+
+fn main() {
+    match file_double("foobar") {
+        Ok(n) => println!("{}", n),
+        Err(err) => println!("Error: {:?}", err),
+    }
+}
+{{< /code-rust >}}
+
+The only change here is switching `map_err(|e| e.to_string())` (which converts
+errors to strings) to `map_err(CliError::Io)` or `map_err(CliError::Parse)`.
+The *caller* gets to decide the level of detail to report to the user. In
+effect, using a `String` as an error type removes choices from the caller while
+using a custom `enum` error type like `CliError` gives the caller all of the
+conveniences as before in addition to *structured data* describing the error.
+
+A rule of thumb is to define your own error type, but a `String` error type
+will do in a pinch, particularly if you're writing an application. If you're
+writing a library, defining your own error type should be strongly preferred so
+that you don't remove choices from the caller unnecessarily.
+
+
+## Standard library error traits
+
+TODO.
+
+
+### The `From` trait
+
+The `std::convert::From` trait is
+[defined in the standard
+library](http://doc.rust-lang.org/std/convert/trait.From.html):
+
+{{< code-rust "from-def" >}}
+trait From<T> {
+    fn from(T) -> Self;
+}
+{{< /code-rust >}}
+
+Deliciously simple, yes? `From` is very useful because it gives us a generic
+way to talk about conversion *from* a particular type `T` to some other type
+(in this case, "some other type" is the subject of the impl, or `Self`).
+The crux of `From` is the
+[set of implementations provided by the standard
+library](http://doc.rust-lang.org/std/convert/trait.From.html).
 
 
 ## The `Error` trait
