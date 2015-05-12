@@ -1,11 +1,14 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 
+use std::io;
+use std::num;
+
 // We derive `Debug` because all types should probably derive `Debug`.
 // This gives us a reasonable human readable description of `CliError` values.
 #[derive(Debug)]
 enum CliError {
-    Io(::std::io::Error),
-    Parse(::std::num::ParseIntError),
+    Io(io::Error),
+    Parse(num::ParseIntError),
 }
 
 use std::fs::File;

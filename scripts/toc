@@ -18,5 +18,6 @@ if __name__ == '__main__':
         for m in RE_HEADING.finditer(post):
             level = len(m.group('level')) - 2
             title = m.group('title').strip()
-            id_name = re.sub('[ \']', '-', re.sub('[`:!]', '', title.lower()))
+            id_name = re.sub('[ \'<>]', '-', re.sub('[`:!]', '', title.lower()))
+            id_name = re.sub('-+', '-', id_name)
             print(('    ' * level) + '* ' + ('[%s](#%s)' % (title, id_name)))
