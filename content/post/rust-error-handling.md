@@ -1,6 +1,5 @@
 +++
 date = "2015-05-06T18:22:00-04:00"
-draft = true
 title = "Error Handling in Rust"
 author = "Andrew Gallant"
 url = "rust-error-handling"
@@ -243,7 +242,8 @@ value constructor, except it has no arguments. You can think of `None` as a
 function with the type `fn<T>() -> Option<T>`.
 
 This might seem like much ado about nothing, but this is only half of the
-story. The other half is *using* the `find` function we've written:
+story. The other half is *using* the `find` function we've written. Let's try
+to use it to find the extension in a file name.
 
 {{< code-rust "option-ex-string-find" "2" >}}
 fn main_find() {
@@ -483,8 +483,8 @@ type Option<T> = Result<T, ()>;
 {{< /code-rust >}}
 
 This fixes the second type parameter of `Result` to always be `()` (pronounced
-"unit"). Exactly one value inhabits the `()` type: `()`. (Yup, the type and
-value level terms have the same notation!)
+"unit" or "empty tuple"). Exactly one value inhabits the `()` type: `()`. (Yup,
+the type and value level terms have the same notation!)
 
 The `Result` type is a way of representing one of two possible outcomes in a
 computation. By convention, one outcome is meant to be expected or "`Ok`" while
@@ -684,7 +684,7 @@ summarize some of my *opinions* on the matter.
 * **When panicing indicates a bug in the program.** When the invariants of your
   code should prevent a certain case from happening (like, say, popping from an
   empty stack), then panicing can be permissible. This is because it exposes a
-  bug in your program. This can be explicit as a result from an `assert!`
+  bug in your program. This can be explicit, like from an `assert!`
   failing, or it could be because your index into an array was out of bounds.
 
 This is probably not an exhaustive list. Moreover, when using an `Option`, it
@@ -1218,13 +1218,15 @@ impl fmt::Display for CliError {
 
 impl error::Error for CliError {
     fn description(&self) -> &str {
-        // This method returns a borrowed string with a lifetime attached to
-        // the error value. This means we cannot heap allocate a new string
-        // in this method using safe code, so we are forced to keep the
-        // description short and sweet.
+        // Both underlying errors already impl `Error`, so we defer to their
+        // implementations.
         match *self {
-            CliError::Io(_) => "IO error",
-            CliError::Parse(_) => "error converting string to number",
+            CliError::Io(ref err) => err.description(),
+            // Normally we can just write `err.description()`, but the error
+            // type has a concrete method called `description`, which conflicts
+            // with the trait method. For now, we must explicitly call
+            // `description` through the `Error` trait.
+            CliError::Parse(ref err) => error::Error::description(err),
         }
     }
 
@@ -1240,6 +1242,10 @@ impl error::Error for CliError {
     }
 }
 {{< /code-rust >}}
+
+I note that this is a very typical implementation of `Error`: match on your
+different error types and satisfy the contracts defined for `description` and
+`cause`.
 
 
 ### The `From` trait
@@ -1310,7 +1316,7 @@ function call: `From::from`. This is because `From::from` is overloaded on both
 its argument and its return type.
 
 This pattern is important because it solves a problem we had earlier: it gives
-us a way to reliably convert errors to the same type.
+us a way to reliably convert errors to the same type using the same function.
 
 Time to revisit an old friend; the `try!` macro.
 
@@ -1573,8 +1579,9 @@ and [`rustc-serialize`](https://crates.io/crates/rustc-serialize) crates.
 
 ### It's on Github
 
-All code for this case study is on Github. If you have Rust and Cargo
-installed, then all you need to do is:
+The final code for this case study is
+[on Github](https://github.com/BurntSushi/rust-error-handling-case-study).
+If you have Rust and Cargo installed, then all you need to do is:
 
 {{< high "bash" >}}
 git clone git://github.com/BurntSushi/rust-error-handling-case-study
@@ -1964,8 +1971,7 @@ First, here's the new usage and `Args` struct:
 
 {{< high "rust" >}}
 static USAGE: &'static str = "
-Usage: city-pop [options] <data-path> <city>
-       city-pop [options] <city>
+Usage: city-pop [options] [<data-path>] <city>
        city-pop --help
 
 Options:
@@ -1979,8 +1985,9 @@ struct Args {
 }
 {{< /high >}}
 
-All we did is add a new pattern to our Docopt usage string, and made
-`arg_data_path` optional. The `docopt` crate will handle the rest.
+All we did is make the `data-path` argument optional in the Docopt usage
+string, and make the corresponding struct member `arg_data_path` optional. The
+`docopt` crate will handle the rest.
 
 Modifying `search` is slightly trickier. The `csv` crate can build a parser out
 of
@@ -2142,8 +2149,7 @@ string and add a flag to the `Args` struct. The `docopt` crate does the rest:
 
 {{< high "rust" >}}
 static USAGE: &'static str = "
-Usage: city-pop [options] <data-path> <city>
-       city-pop [options] <city>
+Usage: city-pop [options] [<data-path>] <city>
        city-pop --help
 
 Options:
@@ -2187,18 +2193,10 @@ handling.
 
 ## The short story
 
-<!--
-This article is long. *Very* long. It is not long because error handling is
-complex, but rather, I started with very few assumptions about my readers. In
-particular, almost half of it is about algebraic data types and combinators. If
-you've never written in a functional programming language before, those can be
-overwhelming!
--->
-
-This article is long. *Very* long. Therefore, it is useful to have a quick
-summary for error handling in Rust. These are my "rules of thumb." They are
-emphatically *not* commandments. There are probably good reasons to break every
-one of these heuristics!
+Since this article is long, it is useful to have a quick summary for error
+handling in Rust. These are my "rules of thumb." They are emphatically *not*
+commandments. There are probably good reasons to break every one of these
+heuristics!
 
 * If you're writing short example code that would be overburdened by error
   handling, it's probably just fine to use `unwrap` (whether that's
