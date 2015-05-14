@@ -1,5 +1,5 @@
 +++
-date = "2015-05-06T18:22:00-04:00"
+date = "2015-05-14T10:47:26-04:00"
 title = "Error Handling in Rust"
 author = "Andrew Gallant"
 url = "rust-error-handling"
@@ -471,7 +471,7 @@ enum Result<T, E> {
 }
 {{< /code-rust >}}
 
-The `Result` type is richer version of `Option`. Instead of expressing the
+The `Result` type is a richer version of `Option`. Instead of expressing the
 possibility of *absence* like `Option` does, `Result` expresses the possibility
 of *error*. Usually, the *error* is used to explain why the result of some
 computation failed. This is a strictly more general form of `Option`. Consider
@@ -681,10 +681,10 @@ summarize some of my *opinions* on the matter.
   or a quick program, and error handling simply isn't important. Beating the
   convenience of `unwrap` can be hard in such scenarios, so it is very
   appealing.
-* **When panicing indicates a bug in the program.** When the invariants of your
-  code should prevent a certain case from happening (like, say, popping from an
-  empty stack), then panicing can be permissible. This is because it exposes a
-  bug in your program. This can be explicit, like from an `assert!`
+* **When panicking indicates a bug in the program.** When the invariants of
+  your code should prevent a certain case from happening (like, say, popping
+  from an empty stack), then panicking can be permissible. This is because it
+  exposes a bug in your program. This can be explicit, like from an `assert!`
   failing, or it could be because your index into an array was out of bounds.
 
 This is probably not an exhaustive list. Moreover, when using an `Option`, it
@@ -757,7 +757,7 @@ use std::env;
 
 fn double_arg(mut argv: env::Args) -> Result<i32, String> {
     argv.nth(1)
-        .ok_or("Please give at least one argument".into())
+        .ok_or("Please give at least one argument".to_owned())
         .and_then(|arg| arg.parse::<i32>().map_err(|err| err.to_string()))
 }
 
@@ -868,7 +868,7 @@ type from `i32` to something else.
 
 The first thing we need to decide: should we use `Option` or `Result`? We
 certainly could use `Option` very easily. If any of the three errors occur, we
-could simply return `None`. This will work *and it is better than panicing*,
+could simply return `None`. This will work *and it is better than panicking*,
 but we can do a lot better. Instead, we should pass some detail about the error
 that occurred. Since we want to express the *possibility of error*, we should
 use `Result<i32, E>`. But what should `E` be? Since two *different* types of
