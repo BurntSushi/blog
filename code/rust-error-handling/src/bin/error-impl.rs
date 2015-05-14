@@ -27,13 +27,15 @@ fn main() {
   
   impl error::Error for CliError {
       fn description(&self) -> &str {
-          // This method returns a borrowed string with a lifetime attached to
-          // the error value. This means we cannot heap allocate a new string
-          // in this method using safe code, so we are forced to keep the
-          // description short and sweet.
+          // Both underlying errors already impl `Error`, so we defer to their
+          // implementations.
           match *self {
-              CliError::Io(_) => "IO error",
-              CliError::Parse(_) => "error converting string to number",
+              CliError::Io(ref err) => err.description(),
+              // Normally we can just write `err.description()`, but the error
+              // type has a concrete method called `description`, which conflicts
+              // with the trait method. For now, we must explicitly call
+              // `description` through the `Error` trait.
+              CliError::Parse(ref err) => error::Error::description(err),
           }
       }
   
