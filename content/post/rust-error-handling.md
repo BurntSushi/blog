@@ -15,33 +15,32 @@ two broad categories: exceptions and return values. Rust opts for return
 values.
 
 In this article, I intend to provide a comprehensive treatment of how to deal
-with errors in Rust. I will cover error handling in libraries, where it is the
-library's responsibility to pass errors on to the caller. I will also cover
-error handling in command line programs, where it is the program's
-responsibility to present errors to the user in a clean and predictable manner.
+with errors in Rust. More than that, I will attempt to introduce error handling
+one piece at a time so that you'll come away with a solid working knowledge of
+how everything fits together.
 
 When done naively, error handling in Rust can be verbose and annoying. This
 article will explore those stumbling blocks and demonstrate how to use the
 standard library to make error handling concise and ergonomic.
 
 **Target audience**: Those new to Rust that don't know its error handling
-idioms yet. Some familiarity with Rust is helpful (e.g., this article will make
-use of traits and closures).
+idioms yet. Some familiarity with Rust is helpful. (This article makes heavy
+use of some standard traits and some very light use of closures and macros.)
 
 <!--more-->
 
 
 ## Brief notes
 
-All code samples in this post compile with Rust `1.0.0-beta.4`. They should
+All code samples in this post compile with Rust `1.0.0-beta.5`. They should
 continue to work as Rust 1.0 stable is released.
 
 All code can be found and compiled in
 [my blog's repository](https://github.com/BurntSushi/blog/tree/master/code/rust-error-handling).
 
-The [Rust Book](http://doc.rust-lang.org/1.0.0-beta.4/book/)
+The [Rust Book](http://doc.rust-lang.org/1.0.0-beta.5/book/)
 has a [section on error
-handling](http://doc.rust-lang.org/1.0.0-beta.4/book/error-handling.html).
+handling](http://doc.rust-lang.org/1.0.0-beta.5/book/error-handling.html).
 It gives a very brief overview, but doesn't (yet) go into enough detail,
 particularly when working with some of the more recent additions to the
 standard library.
@@ -58,20 +57,40 @@ $ cd blog/code/rust-error-handling
 $ cargo run --bin NAME-OF-CODE-SAMPLE [ args ... ]
 {{< /high >}}
 
-Each code sample is labeled with its name.
+Each code sample is labeled with its name. (Code samples without a name aren't
+available to be run this way. Sorry.)
 
 
 ## Table of Contents
 
-This article has three major sections (plus some caveats and closing remarks).
-The first section, "The Basics," can be skipped if you are already familiar
-with algebraic data types and combinators (even if you don't know Rust). If
-you don't know Rust, it will still be a good idea to at least skim the code
-examples so you can get familiar with the syntax.
+This article is very long, mostly because I start at the very beginning with
+sum types and combinators, and try to motivate the way Rust does error handling
+incrementally. As such, programmers with experience in other expressive type
+systems may want to jump around. Here's my very brief guide:
 
-If you're already familiar with Rust and just want to learn more about using
-the `From` and `Error` traits with the `try!` macro, then please skip the "The
-Basics" entirely.
+* If you're new to Rust, systems programming and expressive type systems, then
+  start at the beginning and work your way through. (If you're brand new, you
+  should probably read through the [Rust
+  book](http://doc.rust-lang.org/1.0.0-beta.5/book/) first.)
+* If you've never seen Rust before but have experience with functional
+  languages ("algebraic data types" and "combinators" make you feel warm and
+  fuzzy), then you can probably skip right over the basics and start by
+  skimming [multiple error types](#working-with-multiple-error-types), and work
+  you're way into a full read of
+  [standard library error
+  traits](#standard-library-traits-used-for-error-handling).
+  (Skimming [the basics](#the-basics) might be a good idea to just get a feel
+  for the syntax if you've really never seen Rust before.)
+  You may need to [consult the Rust
+  book](http://doc.rust-lang.org/1.0.0-beta.5/book/) for help with Rust
+  closures and macros.
+* If you're already experienced with Rust and just want the skinny on error
+  handling, then you can probably skip straight [to the end](#the-short-story).
+  You may find it useful to skim the [case
+  study](#case-study-a-program-to-read-population-data) for examples.
+
+---
+
 
 * [The Basics](#the-basics)
     * [Unwrapping explained](#unwrapping-explained)
@@ -92,7 +111,17 @@ Basics" entirely.
     * [The `From` trait](#the-from-trait)
     * [The real `try!` macro](#the-real-try-macro)
     * [Composing custom error types](#composing-custom-error-types)
-* [Case study: parsing something](#case-study-parsing-something)
+    * [Advice for library writers](#advice-for-library-writers)
+* [Case study: A program to read population data](#case-study-a-program-to-read-population-data)
+    * [It's on Github](#it-s-on-github)
+    * [Initial setup](#initial-setup)
+    * [Argument parsing](#argument-parsing)
+    * [Writing the logic](#writing-the-logic)
+    * [Error handling with `Box<Error>`](#error-handling-with-box-error)
+    * [Reading from stdin](#reading-from-stdin)
+    * [Error handling with a custom type](#error-handling-with-a-custom-type)
+    * [Adding functionality](#adding-functionality)
+* [The short story](#the-short-story)
 
 
 ## The Basics
@@ -227,7 +256,7 @@ fn main_find() {
 {{< /code-rust >}}
 
 This code uses [pattern
-matching](http://doc.rust-lang.org/1.0.0-beta.4/book/patterns.html) to do *case
+matching](http://doc.rust-lang.org/1.0.0-beta.5/book/patterns.html) to do *case
 analysis* on the `Option<usize>` returned by the `find` function. In fact, case
 analysis is the only way to get at the value stored inside an `Option<T>`. This
 means that you, as the programmer, must handle the case when an `Option<T>` is
@@ -548,7 +577,7 @@ explicitness for the moment. We only care about `i32`, so we need to
 `FromStr`](http://doc.rust-lang.org/std/primitive.i32.html)
 (do a `CTRL-F` in your browser for "FromStr")
 and look at its [associated
-type](http://doc.rust-lang.org/1.0.0-beta.4/book/associated-types.html) `Err`.
+type](http://doc.rust-lang.org/1.0.0-beta.5/book/associated-types.html) `Err`.
 We did this so we can find the concrete error type. In this case, it's
 [`std::num::ParseIntError`](http://doc.rust-lang.org/std/num/struct.ParseIntError.html).
 Finally, we can rewrite our function:
@@ -1142,7 +1171,7 @@ The first two are a result of `Error` requiring impls for both `Debug` and
 `Display`. The latter two are from the two methods defined on `Error`. The
 power of `Error` comes from the fact that all error types impl `Error`, which
 means errors can be existentially quantified as a
-[trait object](http://doc.rust-lang.org/1.0.0-beta.4/book/trait-objects.html).
+[trait object](http://doc.rust-lang.org/1.0.0-beta.5/book/trait-objects.html).
 This manifests as either `Box<Error>` or `&Error`. Indeed, the `cause` method
 returns an `&Error`, which is itself a trait object. We'll revisit the
 `Error` trait's utility as a trait object later.
@@ -1478,9 +1507,732 @@ impl From<num::ParseFloatError> for CliError {
 
 And that's it!
 
-At this point, we've covered most of what the standard library provides for
-error handling. The next step is to flex our muscles and see what error
-handling looks like in code beyond toy examples.
+
+### Advice for library writers
+
+Idioms for Rust libraries are still forming, but if your library needs to
+report custom errors, then you should probably define your own error type.
+It's up to you whether or not to expose its representation
+(like [`ErrorKind`](http://doc.rust-lang.org/std/io/enum.ErrorKind.html))
+or keep it hidden
+(like
+[`ParseIntError`](http://doc.rust-lang.org/std/num/struct.ParseIntError.html)).
+Regardless of how you do it, it's usually good practice to at least provide
+some information about the error beyond just its `String` representation. But
+certainly, this will vary depending on use cases.
+
+At a minimum, you should probably implement the
+[`Error`](http://doc.rust-lang.org/std/error/trait.Error.html)
+trait. This will give users of your library some minimum flexibility for
+[composing errors](#the-real-try-macro). Implementing the `Error` trait also
+means that users are guaranteed the ability to obtain a string representation
+of an error (because it requires impls for both `fmt::Debug` and
+`fmt::Display`).
+
+Beyond that, it can also be useful to provide implementations of `From` on your
+error types. This allows you (the library author) and your users to
+[compose more detailed errors](#composing-custom-error-types). For example,
+[`csv::Error`](http://burntsushi.net/rustdoc/csv/enum.Error.html)
+provides `From` impls for both `io::Error` and `byteorder::Error`.
+
+Finally, depending on your tastes, you may also want to define a
+[`Result` type alias](#the-result-type-alias-idiom), particularly if your
+library defines a single error type. This is used in the standard library
+for [`io::Result`](http://doc.rust-lang.org/std/io/type.Result.html)
+and [`fmt::Result`](http://doc.rust-lang.org/std/fmt/type.Result.html).
 
 
-## Case study: parsing something
+## Case study: A program to read population data
+
+This article was long, and depending on your background, it might be rather
+dense. While there is plenty of example code to go along with the prose, most
+of it was specifically designed to be pedagogical. While I'm not quite smart
+enough to craft pedagogical examples that are also *not* toy examples, I
+certainly can write about a case study.
+
+For this, I'd like to build up a command line program that lets you
+query world population data. The objective is simple: you give it a location
+and it will tell you the population. Despite the simplicity, there is a lot
+that can go wrong!
+
+The data we'll be using comes from the
+[Data Science Toolkit](https://github.com/petewarden/dstkdata). I've prepared
+some data from it for this exercise. You can either grab the
+[world population data](http://burntsushi.net/stuff/worldcitiespop.csv.gz)
+(41MB gzip compressed, 145MB uncompressed) or just the
+[US population data](http://burntsushi.net/stuff/uscitiespop.csv.gz)
+(2.2MB gzip compressed, 7.2MB uncompressed).
+
+Up until now, I've kept the code limited to Rust's standard library. For a real
+task like this though, we'll want to at least use something to parse CSV data,
+parse the program arguments and decode that stuff into Rust types automatically. For that, we'll use the
+[`csv`](https://crates.io/crates/csv),
+[`docopt`](https://crates.io/crates/docopt)
+and [`rustc-serialize`](https://crates.io/crates/rustc-serialize) crates.
+
+
+### It's on Github
+
+All code for this case study is on Github. If you have Rust and Cargo
+installed, then all you need to do is:
+
+{{< high "bash" >}}
+git clone git://github.com/BurntSushi/rust-error-handling-case-study
+cd rust-error-handling-case-study
+cargo build --release
+./target/release/city-pop --help
+{{< /high >}}
+
+We'll build up this project in pieces. Read on and follow along!
+
+
+### Initial setup
+
+I'm not going to spend a lot of time on setting up a project with Cargo because
+it is already covered well in
+[the Rust book](http://doc.rust-lang.org/1.0.0-beta.5/book/hello-cargo.html)
+and
+[Cargo's documentation](http://doc.crates.io/guide.html).
+
+To get started from scratch, run `cargo new --bin city-pop` and make sure your
+`Cargo.toml` looks something like this:
+
+{{< high "text" >}}
+
+[package]
+name = "city-pop"
+version = "0.1.0"
+authors = ["Andrew Gallant <jamslam@gmail.com>"]
+
+[[bin]]
+name = "city-pop"
+
+[dependencies]
+csv = "0.*"
+docopt = "0.*"
+rustc-serialize = "0.*"
+{{< /high >}}
+
+<!--*-->
+
+You should already be able to run:
+
+{{< high "bash" >}}
+cargo build --release
+./target/release/city-pop
+#Outputs: Hello, world!
+{{< /high >}}
+
+
+### Argument parsing
+
+Let's get argument parsing out of the way. I won't go into too much detail on
+Docopt, but there is a
+[nice web page](http://docopt.org/) describing it and
+[documentation for the Rust crate](http://burntsushi.net/rustdoc/docopt/).
+The short story is that Docopt generates an argument parser *from the usage
+string*. Once the parsing is done, we can decode the program arguments into a
+Rust struct. Here's our program with the appropriate `extern crate` statements,
+the usage string, our `Args` struct and an empty `main`:
+
+{{< high "rust" >}}
+extern crate docopt;
+extern crate rustc_serialize;
+
+static USAGE: &'static str = "
+Usage: city-pop [options] <data-path> <city>
+       city-pop --help
+
+Options:
+    -h, --help     Show this usage message.
+";
+
+#[derive(Debug, RustcDecodable)]
+struct Args {
+    arg_data_path: String,
+    arg_city: String,
+}
+
+fn main() {
+
+}
+{{< /high >}}
+
+Okay, time to get coding. The
+[docs for
+Docopt](http://burntsushi.net/rustdoc/docopt/struct.Docopt.html#method.new)
+say we can create a new parser with `Docopt::new` and then decode the current
+program arguments into a struct with `Docopt::decode`. The catch is that both
+of these functions can return a
+[`docopt::Error`](http://burntsushi.net/rustdoc/docopt/enum.Error.html).
+We can start with explicit case analysis:
+
+{{< high "rust" >}}
+// These use statements were added below the `extern` statements.
+// I'll elide them in the future. Don't worry! It's all on Github:
+// https://github.com/BurntSushi/rust-error-handling-case-study
+//use std::io::{self, Write};
+//use std::process;
+//use docopt::Docopt;
+
+fn main() {
+    let args: Args = match Docopt::new(USAGE) {
+        Err(err) => {
+            writeln!(&mut io::stderr(), "{}", err).unwrap();
+            process::exit(1);
+        }
+        Ok(dopt) => match dopt.decode() {
+            Err(err) => {
+                writeln!(&mut io::stderr(), "{}", err).unwrap();
+                process::exit(1);
+            }
+            Ok(args) => args,
+        }
+    };
+}
+{{< /high >}}
+
+This is not so nice. One thing we can do to make the code a bit clearer is to
+write a macro to print messages to `stderr` and then exit:
+
+{{< code-rust "fatal-def" >}}
+macro_rules! fatal {
+    ($($tt:tt)*) => {{
+        use std::io::Write;
+        writeln!(&mut ::std::io::stderr(), $($tt)*).unwrap();
+        ::std::process::exit(1)
+    }}
+}
+{{< /code-rust >}}
+
+The `unwrap` is probably OK here, because if it fails, it means your program
+could not write to `stderr`. A good rule of thumb here is that it's OK to
+abort, but certainly, you could do something else if you needed to.
+
+The code looks nicer, but the explicit case analysis is still a drag:
+
+{{< high "rust" >}}
+let args: Args = match Docopt::new(USAGE) {
+    Err(err) => fatal!("{}", err),
+    Ok(dopt) => match dopt.decode() {
+        Err(err) => fatal!("{}", err),
+        Ok(args) => args,
+    }
+};
+{{< /high >}}
+
+Thankfully, the
+[`docopt::Error`](http://burntsushi.net/rustdoc/docopt/enum.Error.html)
+type defines a convenient method
+[`exit`](http://burntsushi.net/rustdoc/docopt/enum.Error.html#method.exit),
+which effectively does what we just did. Combine that with our knowledge of
+combinators, and we have concise, easy to read code:
+
+{{< high "rust" >}}
+let args: Args = Docopt::new(USAGE)
+                        .and_then(|d| d.decode())
+                        .unwrap_or_else(|err| err.exit());
+{{< /high >}}
+
+If this code completes successfully, then `args` will be filled from the values
+provided by the user.
+
+
+### Writing the logic
+
+We're all different in how we write code, but when I'm not sure how to go about
+coding a problem, error handling is usually the last thing I want to think
+about. This isn't very good practice for good design, but it can be useful for
+rapidly prototyping. In our case, because Rust forces us to be explicit about
+error handling, it will also make it obvious what parts of our program can
+cause errors. Why? Because Rust will make us call `unwrap`! This can give us a
+nice bird's eye view of how we need to approach error handling.
+
+In this case study, the logic is really simple. All we need to do is parse the
+CSV data given to us and print out a field in matching rows. Let's do it. (Make
+sure to add `extern crate csv;` to the top of your file.)
+
+{{< high "rust" >}}
+// This struct represents the data in each row of the CSV file.
+// Type based decoding absolves us of a lot of the nitty gritty error
+// handling, like parsing strings as integers or floats.
+#[derive(Debug, RustcDecodable)]
+struct Row {
+    country: String,
+    city: String,
+    accent_city: String,
+    region: String,
+
+    // Not every row has data for the population, latitude or longitude!
+    // So we express them as `Option` types, which admits the possibility of
+    // absence. The CSV parser will fill in the correct value for us.
+    population: Option<u64>,
+    latitude: Option<f64>,
+    longitude: Option<f64>,
+}
+
+fn main() {
+    let args: Args = Docopt::new(USAGE)
+                            .and_then(|d| d.decode())
+                            .unwrap_or_else(|err| err.exit());
+
+    let file = fs::File::open(args.arg_data_path).unwrap();
+    let mut rdr = csv::Reader::from_reader(file);
+    for row in rdr.decode::<Row>() {
+        let row = row.unwrap();
+        if row.city == args.arg_city {
+            println!("{}, {}: {:?}",
+                     row.city, row.country,
+                     row.population.expect("population count"));
+        }
+    }
+}
+{{< /high >}}
+
+Let's outline the errors. We can start with the obvious: the three places that
+`unwrap` is called:
+
+1. [`fs::File::open`](http://doc.rust-lang.org/std/fs/struct.File.html#method.open)
+   can return an
+   [`io::Error`](http://doc.rust-lang.org/std/io/struct.Error.html).
+2. [`csv::Reader::decode`](http://burntsushi.net/rustdoc/csv/struct.Reader.html#method.decode)
+   decodes one record at a time, and
+   [decoding a
+   record](http://burntsushi.net/rustdoc/csv/struct.DecodedRecords.html)
+   (look at the `Item` associated type on the `Iterator` impl)
+   can produce a
+   [`csv::Error`](http://burntsushi.net/rustdoc/csv/enum.Error.html).
+3. If `row.population` is `None`, then calling `expect` will panic.
+
+Are there any others? What if we can't find a matching city? Tools like `grep`
+will return an error code, so we probably should too. So we have logic errors
+specific to our problem, IO errors and CSV parsing errors. We're going to
+explore two different ways to approach handling these errors.
+
+I'd like to start with `Box<Error>`. Later, we'll see how defining our own
+error type can be useful.
+
+
+### Error handling with `Box<Error>`
+
+`Box<Error>` is nice because it *just works*. You don't need to define your own
+error types and you don't need any `From` implementations. The downside is that
+since `Box<Error>` is a trait object, it *erases the type*, which means the
+compiler can no longer reason about its underlying type.
+
+[Previously](#the-limits-of-combinators) we started refactoring our code by
+changing the type of our function from `T` to `Result<T, OurErrorType>`. In
+this case, `OurErrorType` is just `Box<Error>`. But what's `T`? And can we add
+a return type to `main`?
+
+The answer to the second question is no, we can't. That means we'll need to
+write a new function. But what is `T`? The simplest thing we can do is to
+return a list of matching `Row` values as a `Vec<Row>`. (Better code would
+return an iterator, but that is left as an exercise to the reader.)
+
+Let's refactor our code into its own function, but keep the calls to `unwrap`.
+Note that we opt to handle the possibility of a missing population count by
+simply ignoring that row.
+
+{{< high "rust" >}}
+struct Row {
+    // unchanged
+}
+
+struct PopulationCount {
+    city: String,
+    country: String,
+    // This is no longer an `Option` because values of this type are only
+    // constructed if they have a population count.
+    count: u64,
+}
+
+fn search<P: AsRef<Path>>(file_path: P, city: &str) -> Vec<PopulationCount> {
+    let mut found = vec![];
+    let file = fs::File::open(file_path).unwrap();
+    let mut rdr = csv::Reader::from_reader(file);
+    for row in rdr.decode::<Row>() {
+        let row = row.unwrap();
+        match row.population {
+            None => { } // skip it
+            Some(count) => if row.city == city {
+                found.push(PopulationCount {
+                    city: row.city,
+                    country: row.country,
+                    count: count,
+                });
+            },
+        }
+    }
+    found
+}
+
+fn main() {
+    let args: Args = Docopt::new(USAGE)
+                            .and_then(|d| d.decode())
+                            .unwrap_or_else(|err| err.exit());
+
+    for pop in search(&args.arg_data_path, &args.arg_city) {
+        println!("{}, {}: {:?}", pop.city, pop.country, pop.count);
+    }
+}
+{{< /high >}}
+
+While we got rid of one use of `expect` (which is a nicer variant of `unwrap`),
+we still should handle the absence of any search results.
+
+To convert this to proper error handling, we need to do the following:
+
+1. Change the return type of `search` to be `Result<Vec<PopulationCount>,
+   Box<Error>>`.
+2. Use the [`try!` macro](#code-try-def) so that errors are returned to the
+   caller instead of panicking the program.
+3. Handle the error in `main`.
+
+Let's try it:
+
+{{< high "rust" >}}
+fn search<P: AsRef<Path>>
+         (file_path: P, city: &str)
+         -> Result<Vec<PopulationCount>, Box<Error+Send+Sync>> {
+    let mut found = vec![];
+    let file = try!(fs::File::open(file_path));
+    let mut rdr = csv::Reader::from_reader(file);
+    for row in rdr.decode::<Row>() {
+        let row = try!(row);
+        match row.population {
+            None => { } // skip it
+            Some(count) => if row.city == city {
+                found.push(PopulationCount {
+                    city: row.city,
+                    country: row.country,
+                    count: count,
+                });
+            },
+        }
+    }
+    if found.is_empty() {
+        Err(From::from("No matching cities with a population were found."))
+    } else {
+        Ok(found)
+    }
+}
+{{< /high >}}
+
+Instead of `x.unwrap()`, we now have `try!(x)`. Since our function returns a
+`Result<T, E>`, the `try!` macro will return early from the function if an
+error occurs.
+
+There is one big gotcha in this code: we used `Box<Error + Send + Sync>`
+instead of `Box<Error>`. We did this so we could convert a plain string to an
+error type. We need these extra bounds so that we can use the
+[corresponding `From`
+impls](http://doc.rust-lang.org/std/convert/trait.From.html):
+
+{{< high "rust" >}}
+// We are making use of this impl in the code above, since we call `From::from`
+// on a `&'static str`.
+impl<'a, 'b> From<&'b str> for Box<Error + Send + Sync + 'a>
+
+// But this is also useful when you need to allocate a new string for an
+// error message, usually with `format!`.
+impl From<String> for Box<Error + Send + Sync>
+{{< /high >}}
+
+<!--'-->
+
+Now that we've seen how to do proper error handling with `Box<Error>`, let's
+try a different approach with our own custom error type. But first, let's take
+a quick break from error handling and add support for reading from `stdin`.
+
+
+### Reading from stdin
+
+In our program, we accept a single file for input and do one pass over the
+data. This means we probably should be able to accept input on stdin. But maybe
+we like the current format too---so let's have both!
+
+Adding support for stdin is actually quite easy. There are only two things we
+have to do:
+
+1. Tweak the program arguments so that a single parameter---the city---can be
+   accepted while the population data is read from stdin.
+2. Modify the `search` function to take an *optional* file path. When `None`,
+   it should know to read from stdin.
+
+First, here's the new usage and `Args` struct:
+
+{{< high "rust" >}}
+static USAGE: &'static str = "
+Usage: city-pop [options] <data-path> <city>
+       city-pop [options] <city>
+       city-pop --help
+
+Options:
+    -h, --help     Show this usage message.
+";
+
+#[derive(Debug, RustcDecodable)]
+struct Args {
+    arg_data_path: Option<String>,
+    arg_city: String,
+}
+{{< /high >}}
+
+All we did is add a new pattern to our Docopt usage string, and made
+`arg_data_path` optional. The `docopt` crate will handle the rest.
+
+Modifying `search` is slightly trickier. The `csv` crate can build a parser out
+of
+[any type that implements
+`io::Read`](http://burntsushi.net/rustdoc/csv/struct.Reader.html#method.from_reader).
+But how can we use the same code over both types? There's actually a couple
+ways we could go about this. One way is to write `search` such that it is
+generic on some type parameter `R` that satisfies `io::Read`. Another way is to
+just use trait objects:
+
+{{< high "rust" >}}
+fn search<P: AsRef<Path>>
+         (file_path: &Option<P>, city: &str)
+         -> Result<Vec<PopulationCount>, Box<Error+Send+Sync>> {
+    let mut found = vec![];
+    let input: Box<io::Read> = match *file_path {
+        None => Box::new(io::stdin()),
+        Some(ref file_path) => Box::new(try!(fs::File::open(file_path))),
+    };
+    let mut rdr = csv::Reader::from_reader(input);
+    // The rest remains unchanged!
+}
+{{< /high >}}
+
+
+### Error handling with a custom type
+
+Previously, we learned how to
+[compose errors using a custom error type](#composing-custom-error-types).
+We did this by defining our error type as an `enum` and implementing `Error`
+and `From`.
+
+Since we have three distinct errors (IO, CSV parsing and not found), let's
+define an `enum` with three variants:
+
+{{< high "rust" >}}
+#[derive(Debug)]
+enum CliError {
+    Io(io::Error),
+    Csv(csv::Error),
+    NotFound,
+}
+{{< /high >}}
+
+And now for impls on `Display` and `Error`:
+
+{{< high "rust" >}}
+impl fmt::Display for CliError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            CliError::Io(ref err) => err.fmt(f),
+            CliError::Csv(ref err) => err.fmt(f),
+            CliError::NotFound => write!(f, "No matching cities with a \
+                                             population were found."),
+        }
+    }
+}
+
+impl Error for CliError {
+    fn description(&self) -> &str {
+        match *self {
+            CliError::Io(ref err) => err.description(),
+            CliError::Csv(ref err) => err.description(),
+            CliError::NotFound => "not found",
+        }
+    }
+}
+{{< /high >}}
+
+Before we can use our `CliError` type in our `search` function, we need to
+provide a couple `From` impls. How do we know which impls to provide? Well,
+we'll need to convert from both `io::Error` and `csv::Error` to `CliError`.
+Those are the only external errors, so we'll only need two `From` impls for
+now:
+
+{{< high "rust" >}}
+impl From<io::Error> for CliError {
+    fn from(err: io::Error) -> CliError {
+        CliError::Io(err)
+    }
+}
+
+impl From<csv::Error> for CliError {
+    fn from(err: csv::Error) -> CliError {
+        CliError::Csv(err)
+    }
+}
+{{< /high >}}
+
+The `From` impls are important because of how
+[`try!` is defined](#code-try-def). In particular, if an error occurs,
+`From::from` is called on the error, which in this case, will convert it to our
+own error type `CliError`.
+
+With the `From` impls done, we only need to make two small tweaks to our
+`search` function: the return type and the "not found" error. Here it is in
+full:
+
+{{< high "rust" >}}
+fn search<P: AsRef<Path>>
+         (file_path: &Option<P>, city: &str)
+         -> Result<Vec<PopulationCount>, CliError> {
+    let mut found = vec![];
+    let input: Box<io::Read> = match *file_path {
+        None => Box::new(io::stdin()),
+        Some(ref file_path) => Box::new(try!(fs::File::open(file_path))),
+    };
+    let mut rdr = csv::Reader::from_reader(input);
+    for row in rdr.decode::<Row>() {
+        let row = try!(row);
+        match row.population {
+            None => { } // skip it
+            Some(count) => if row.city == city {
+                found.push(PopulationCount {
+                    city: row.city,
+                    country: row.country,
+                    count: count,
+                });
+            },
+        }
+    }
+    if found.is_empty() {
+        Err(CliError::NotFound)
+    } else {
+        Ok(found)
+    }
+}
+{{< /high >}}
+
+No other changes are necessary.
+
+
+### Adding functionality
+
+If you're anything like me, writing generic code feels good because
+generalizing stuff is cool! But sometimes, the juice isn't worth the squeeze.
+Look at what we just did in the previous step:
+
+1. Defined a new error type.
+2. Added impls for `Error`, `Display` and two for `From`.
+
+The big downside here is that our program didn't improve a whole lot. I'm
+personally fond of it because I like using `enum`s for representing errors, but
+there is quite a bit of overhead to doing so, especially in short programs like
+this.
+
+*One* useful aspect of using a custom error type like we've done here is that
+the `main` function can now choose to handle errors differently. Previously,
+with `Box<Error>`, it didn't have much of a choice: just print the message.
+We're still doing that here, but what if we wanted to, say, add a `--quiet`
+flag? The `--quiet` flag should silence any verbose output.
+
+Right now, if the program doesn't find a match, it will output a message saying
+so. This can be a little clumbsy, especially if you intend for the program to
+be used in shell scripts.
+
+So let's start by adding the flags. Like before, we need to tweak the usage
+string and add a flag to the `Args` struct. The `docopt` crate does the rest:
+
+{{< high "rust" >}}
+static USAGE: &'static str = "
+Usage: city-pop [options] <data-path> <city>
+       city-pop [options] <city>
+       city-pop --help
+
+Options:
+    -h, --help     Show this usage message.
+    -q, --quiet    Don't show noisy messages.
+";
+
+#[derive(Debug, RustcDecodable)]
+struct Args {
+    arg_data_path: Option<String>,
+    arg_city: String,
+    flag_quiet: bool,
+}
+{{< /high >}}
+
+Now we just need to implement our "quiet" functionality. This requires us to
+tweak the case analysis in `main`:
+
+{{< high "rust" >}}
+match search(&args.arg_data_path, &args.arg_city) {
+    Err(CliError::NotFound) if args.flag_quiet => process::exit(1),
+    Err(err) => fatal!("{}", err),
+    Ok(pops) => for pop in pops {
+        println!("{}, {}: {:?}", pop.city, pop.country, pop.count);
+    }
+}
+{{< /high >}}
+
+Certainly, we don't want to be quiet if there was an IO error or if the data
+failed to parse. Therefore, we use case analysis to check if the error type is
+`NotFound` *and* if `--quiet` has been enabled. If the search failed, we still
+quit with an exit code (following `grep`'s convention).
+
+If we had stuck with `Box<Error>`, then it would be pretty tricky to implement
+the `--quiet` functionality.
+
+This pretty much sums up our case study. From here, you should be ready to go
+out into the world and write your own programs and libraries with proper error
+handling.
+
+
+## The short story
+
+<!--
+This article is long. *Very* long. It is not long because error handling is
+complex, but rather, I started with very few assumptions about my readers. In
+particular, almost half of it is about algebraic data types and combinators. If
+you've never written in a functional programming language before, those can be
+overwhelming!
+-->
+
+This article is long. *Very* long. Therefore, it is useful to have a quick
+summary for error handling in Rust. These are my "rules of thumb." They are
+emphatically *not* commandments. There are probably good reasons to break every
+one of these heuristics!
+
+* If you're writing short example code that would be overburdened by error
+  handling, it's probably just fine to use `unwrap` (whether that's
+  [`Result::unwrap`](http://doc.rust-lang.org/std/result/enum.Result.html#method.unwrap),
+  [`Option::unwrap`](http://doc.rust-lang.org/std/option/enum.Option.html#method.unwrap)
+  or preferably
+  [`Option::expect`](http://doc.rust-lang.org/std/option/enum.Option.html#method.expect)).
+  Consumers of your code should know to use proper error handling. (If they
+  don't, send them here!)
+* If you're writing a quick 'n' dirty program, don't feel ashamed if you use
+  `unwrap`. Be warned: if it winds up in someone else's hands, don't be
+  surprised if they are agitated by poor error messages!
+* If you're writing a quick 'n' dirty program and feel ashamed about panicking
+  anyway, then using either a `String` or a `Box<Error + Send + Sync>` for your
+  error type (the `Box<Error + Send + Sync>` type is because of the
+  [available `From` impls](http://doc.rust-lang.org/std/convert/trait.From.html)).
+* Otherwise, in a program, define your own error types with appropriate
+  [`From`](http://doc.rust-lang.org/std/convert/trait.From.html)
+  and
+  [`Error`](http://doc.rust-lang.org/std/error/trait.Error.html)
+  impls to make the [`try!`](http://doc.rust-lang.org/std/macro.try!.html)
+  macro more ergnomic.
+* If you're writing a library and your code can produce errors, define your own
+  error type and implement the
+  [`std::error::Error`](http://doc.rust-lang.org/std/error/trait.Error.html)
+  trait. Where appropriate, implement
+  [`From`](http://doc.rust-lang.org/std/convert/trait.From.html) to make both
+  your library code and the caller's code easier to write. (Because of Rust's
+  coherence rules, callers will not be able to impl `From` on your error type,
+  so your library should do it.)
+* Learn the combinators defined on
+  [`Option`](http://doc.rust-lang.org/std/option/enum.Option.html)
+  and
+  [`Result`](http://doc.rust-lang.org/std/result/enum.Result.html).
+  Using them exclusively can be a bit tiring at times, but I've personally
+  found a healthy mix of `try!` and combinators to be quite appealing.
+  `and_then`, `map` and `unwrap_or` are my favorites.

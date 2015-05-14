@@ -20,4 +20,5 @@ if __name__ == '__main__':
             title = m.group('title').strip()
             id_name = re.sub('[ \'<>]', '-', re.sub('[`:!]', '', title.lower()))
             id_name = re.sub('-+', '-', id_name)
+            id_name = id_name.strip('-')
             print(('    ' * level) + '* ' + ('[%s](#%s)' % (title, id_name)))
