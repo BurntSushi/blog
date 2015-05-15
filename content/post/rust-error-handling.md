@@ -126,7 +126,7 @@ systems may want to jump around. Here's my very brief guide:
 ## The Basics
 
 I like to think of error handling as using *case analysis* to determine whether
-a computation was successful or not. As we will see, the key to ergnomic error
+a computation was successful or not. As we will see, the key to ergonomic error
 handling is reducing the amount of explicit case analysis the programmer has to
 do while keeping code composable.
 
@@ -283,7 +283,7 @@ impl<T> Option<T> {
 }
 {{< /code-rust >}}
 
-The `unwrap` method *abstracts the case analysis*. This is precisely the thing
+The `unwrap` method *abstracts away the case analysis*. This is precisely the thing
 that makes `unwrap` ergonomic to use. Unfortunately, that `panic!` means that
 `unwrap` is not composable: it is the bull in the china shop.
 
@@ -1066,7 +1066,7 @@ depending on the error. (e.g., A `BrokenPipe` error might mean quitting your
 program gracefully while a `NotFound` error might mean exiting with an error
 code and showing an error to the user.) With `io::ErrorKind`, the caller can
 examine the type of an error with case analysis, which is strictly superior
-than trying to tease out the details of an error inside of a `String`.
+to trying to tease out the details of an error inside of a `String`.
 
 Instead of using a `String` as an error type in our previous example of reading
 an integer from a file, we can define our own error type that represents errors
