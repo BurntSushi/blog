@@ -16,7 +16,7 @@ direction that language is headed towards.
 #### [Regular expressions](https://github.com/rust-lang/regex)
 
 A port of RE2 to Rust. It also features a `regex!` macro that will
-[compile a regex to native code](rust-regex-syntax-extensions)
+[compile a regex to native code](/rust-regex-syntax-extensions)
 when your Rust program compiles.
 
 #### [QuickCheck](https://github.com/BurntSushi/quickcheck)
@@ -140,7 +140,7 @@ to make
 I *love* American football. Part of the way I enjoy it is by playing
 [fantasy football](http://en.wikipedia.org/wiki/Fantasy_football_\(American\)).
 I think it's a lot of fun to watch how your fantasy teams perform as the games
-are plays, but I'm usually in several leagues on different web sites.
+are played, but I'm usually in several leagues on different web sites.
 
 I solved this problem over a number of years by querying NFL.com for data and
 using it to compute scores for my fantasy teams all in one convenient web
