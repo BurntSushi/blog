@@ -1,0 +1,19 @@
+digraph cauchy {
+    #labelloc="l";
+    #labeljust="l";
+    #rankdir="LR";
+
+    asleep [label="asleep (start)"];
+    eating;
+    hiding;
+    "litter-box";
+    playing;
+
+    asleep -> eating [label="food is served"];
+    eating -> "litter-box" [label="food digests"];
+    eating -> hiding [label="loud noise"];
+    hiding -> eating [label="quiet calm"];
+    "litter-box" -> asleep [label="business is done"];
+    asleep -> playing [label="something moved"];
+    playing -> asleep [label="something stopped moving"];
+}
