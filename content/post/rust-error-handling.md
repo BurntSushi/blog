@@ -8,6 +8,8 @@ url = "rust-error-handling"
 plainIdAnchors = true
 +++
 
+**NOTE**: [This blog post has been merged into the Rust Book.](https://doc.rust-lang.org/stable/book/error-handling.html)
+
 Like most programming languages, Rust encourages the programmer to handle
 errors in a particular way. Generally speaking, error handling is divided into
 two broad categories: exceptions and return values. Rust opts for return
