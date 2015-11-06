@@ -1,6 +1,10 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-fn main() {
-  use std::io;
+extern crate fst;
+
+use std::error::Error;
+
+fn main2() -> Result<(), Box<Error+Send+Sync>> {
+    use std::io;
   use std::num;
   
   // We derive `Debug` because all types should probably derive `Debug`.
@@ -50,4 +54,9 @@ fn main() {
           }
       }
   }
+    Ok(())
+}
+
+fn main() {
+    main2().unwrap();
 }

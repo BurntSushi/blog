@@ -1,6 +1,10 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-fn main() {
-  use std::num::ParseIntError;
+extern crate fst;
+
+use std::error::Error;
+
+fn main2() -> Result<(), Box<Error+Send+Sync>> {
+    use std::num::ParseIntError;
   use std::result;
   
   type Result<T> = result::Result<T, ParseIntError>;
@@ -8,4 +12,9 @@ fn main() {
   fn double_number(number_str: &str) -> Result<i32> {
       unimplemented!();
   }
+    Ok(())
+}
+
+fn main() {
+    main2().unwrap();
 }

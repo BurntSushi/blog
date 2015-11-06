@@ -1,6 +1,15 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-fn main() {
-  trait From<T> {
+extern crate fst;
+
+use std::error::Error;
+
+fn main2() -> Result<(), Box<Error+Send+Sync>> {
+    trait From<T> {
       fn from(T) -> Self;
   }
+    Ok(())
+}
+
+fn main() {
+    main2().unwrap();
 }

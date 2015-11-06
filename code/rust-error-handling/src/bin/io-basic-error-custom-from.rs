@@ -1,6 +1,10 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-fn main() {
-  use std::fs::File;
+extern crate fst;
+
+use std::error::Error;
+
+fn main2() -> Result<(), Box<Error+Send+Sync>> {
+    use std::fs::File;
   use std::io::{self, Read};
   use std::num;
   use std::path::Path;
@@ -40,4 +44,9 @@ fn main() {
       let n: i32 = try!(contents.trim().parse());
       Ok(2 * n)
   }
+    Ok(())
+}
+
+fn main() {
+    main2().unwrap();
 }

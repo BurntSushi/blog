@@ -15,6 +15,9 @@ CARGO_TOML = '''
 name = "{post_name}"
 version = "0.1.0"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
+
+[dependencies]
+fst = "0.1"
 '''
 
 RE_RUST_CODE = re.compile(r'^{{< code-rust "(?P<name>[^"]+)"[^>]*>}}'
@@ -26,9 +29,21 @@ RE_RUST_CODE = re.compile(r'^{{< code-rust "(?P<name>[^"]+)"[^>]*>}}'
 def tweak_code(code):
     if 'fn main()' not in code:
         code = code.replace('\n', '\n  ')
-        code = u'fn main() {\n  ' + code.strip() + u'\n}'
+        code = u'''
+use std::error::Error;
+
+fn main2() -> Result<(), Box<Error+Send+Sync>> {
+    %s
+    Ok(())
+}
+
+fn main() {
+    main2().unwrap();
+}
+''' % code.strip()
     code = '''
 #![allow(dead_code, unused_imports, unused_variables)]
+extern crate fst;
 ''' + code
     return code.strip()
 

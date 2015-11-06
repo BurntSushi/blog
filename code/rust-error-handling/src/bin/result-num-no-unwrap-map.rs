@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_imports, unused_variables)]
+extern crate fst;
 
 use std::num::ParseIntError;
 

@@ -1,6 +1,10 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-fn main() {
-  enum Result<T, E> {
+extern crate fst;
+
+use std::error::Error;
+
+fn main2() -> Result<(), Box<Error+Send+Sync>> {
+    enum Result<T, E> {
       Ok(T),
       Err(E),
   }
@@ -14,4 +18,9 @@ fn main() {
           }
       }
   }
+    Ok(())
+}
+
+fn main() {
+    main2().unwrap();
 }

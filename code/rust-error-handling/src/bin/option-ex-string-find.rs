@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_imports, unused_variables)]
+extern crate fst;
 
 // Searches `haystack` for the Unicode character `needle`. If one is found, the
 // byte offset of the character is returned. Otherwise, `None` is returned.

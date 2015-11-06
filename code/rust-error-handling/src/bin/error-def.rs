@@ -1,6 +1,10 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-fn main() {
-  use std::fmt::{Debug, Display};
+extern crate fst;
+
+use std::error::Error;
+
+fn main2() -> Result<(), Box<Error+Send+Sync>> {
+    use std::fmt::{Debug, Display};
   
   trait Error: Debug + Display {
     /// A short description of the error.
@@ -9,4 +13,9 @@ fn main() {
     /// The lower level cause of this error, if any.
     fn cause(&self) -> Option<&Error> { None }
   }
+    Ok(())
+}
+
+fn main() {
+    main2().unwrap();
 }

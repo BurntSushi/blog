@@ -4,3 +4,5 @@ name = "rust-error-handling"
 version = "0.1.0"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 
+[dependencies]
+fst = "0.1"

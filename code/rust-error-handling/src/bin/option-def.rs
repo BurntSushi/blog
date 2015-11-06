@@ -1,7 +1,16 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-fn main() {
-  enum Option<T> {
+extern crate fst;
+
+use std::error::Error;
+
+fn main2() -> Result<(), Box<Error+Send+Sync>> {
+    enum Option<T> {
       None,
       Some(T),
   }
+    Ok(())
+}
+
+fn main() {
+    main2().unwrap();
 }

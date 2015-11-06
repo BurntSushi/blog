@@ -1,6 +1,10 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-fn main() {
-  use std::error::Error;
+extern crate fst;
+
+use std::error::Error;
+
+fn main2() -> Result<(), Box<Error+Send+Sync>> {
+    use std::error::Error;
   use std::fs;
   use std::io;
   use std::num;
@@ -12,4 +16,9 @@ fn main() {
   // OK, here are the conversions.
   let err1: Box<Error> = From::from(io_err);
   let err2: Box<Error> = From::from(parse_err);
+    Ok(())
+}
+
+fn main() {
+    main2().unwrap();
 }

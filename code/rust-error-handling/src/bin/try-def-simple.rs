@@ -1,9 +1,18 @@
 #![allow(dead_code, unused_imports, unused_variables)]
-fn main() {
-  macro_rules! try {
+extern crate fst;
+
+use std::error::Error;
+
+fn main2() -> Result<(), Box<Error+Send+Sync>> {
+    macro_rules! try {
       ($e:expr) => (match $e {
           Ok(val) => val,
           Err(err) => return Err(err),
       });
   }
+    Ok(())
+}
+
+fn main() {
+    main2().unwrap();
 }

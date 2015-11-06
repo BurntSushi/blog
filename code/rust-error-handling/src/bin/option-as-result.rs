@@ -1,4 +1,13 @@
 #![allow(dead_code, unused_imports, unused_variables)]
+extern crate fst;
+
+use std::error::Error;
+
+fn main2() -> Result<(), Box<Error+Send+Sync>> {
+    type Option<T> = Result<T, ()>;
+    Ok(())
+}
+
 fn main() {
-  type Option<T> = Result<T, ()>;
+    main2().unwrap();
 }
