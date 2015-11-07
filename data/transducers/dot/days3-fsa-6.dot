@@ -1,0 +1,13 @@
+digraph automaton {
+  labelloc="l";
+  labeljust="l";
+  rankdir="LR";
+
+  0 -> 1 [label="m"];
+  1 -> 2 [label="o"];
+  2 -> 3 [label="m"];
+  2 -> 3 [label="n"];
+  3 [peripheries=2];
+
+  0 -> 1 [label="z"];
+}

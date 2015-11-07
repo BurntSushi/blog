@@ -1,0 +1,24 @@
+digraph automaton {
+  labelloc="l";
+  labeljust="l";
+  rankdir="LR";
+
+  0 -> 1 [label="m",style="dotted"];
+  1 -> 2 [label="o",color="blue"];
+  2 -> 3 [label="n",color="blue"];
+  3 [peripheries=2];
+
+  0 -> 4 [label="t",style="dotted"];
+  4 -> 5 [label="h",style="dotted"];
+  5 -> 6 [label="u",color="blue"];
+  6 -> 7 [label="r",color="blue"];
+  7 -> 3 [label="s",color="blue"];
+
+  4 -> 8 [label="u",style="dotted"];
+  8 -> 9 [label="e",style="dotted"];
+  9 -> 10 [label="s",style="dotted"];
+  10 [peripheries=2];
+
+  1,2,3,5,6,7 [color="blue"];
+  0,4,8,9,10 [style="dotted"];
+}
