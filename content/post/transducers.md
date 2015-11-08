@@ -759,7 +759,7 @@ of research. Here are two papers that helped me the most:
 * [Smaller Representation of Finite State
   Automata](http://www.cs.put.poznan.pl/dweiss/site/publications/download/fsacomp.pdf)
 
-For an excellent but very long and in depth overview on the field, [Jan
+For an excellent but very long and in depth overview of the field, [Jan
 Daciuk's disseration](http://www.pg.gda.pl/~jandac/thesis.ps.gz) (gzipped
 PostScript warning) is excellent.
 
