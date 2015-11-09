@@ -208,7 +208,7 @@ to process the characters in order:
 
 Since all members of the key have been fed to the FSA, we can now ask: is the
 FSA in a final state? It is (notice the double circle around state `3`), so we
-can say that `july` is in the set.
+can say that `jul` is in the set.
 
 Consider what happens when we test a key that is *not* in the set. For example,
 `jun`:
@@ -229,7 +229,7 @@ Consider another key, `ju`:
 
 In this case, the entire input is exhausted and the FSA is in state `2`. To
 determine whether `ju` is in the set, it must ask whether `2` is a final state
-or not. Since it is not, it can report that the `jul` is not in the set.
+or not. Since it is not, it can report that the `ju` key is not in the set.
 
 It is worth pointing out here that the number of steps required to confirm
 whether a key is in the set or not is bounded by the number of characters in
