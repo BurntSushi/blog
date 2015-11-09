@@ -115,6 +115,15 @@ the performance of finite state machines as a data structure.
         * [Construction in practice](#construction-in-practice)
         * [References](#references)
 * [The FST library](#the-fst-library)
+    * [Building ordered sets and maps](#building-ordered-sets-and-maps)
+        * [A builder shortcut](#a-builder-shortcut)
+    * [Querying ordered sets and maps](#querying-ordered-sets-and-maps)
+    * [Memory maps](#memory-maps)
+    * [Levenshtein automata](#levenshtein-automata)
+    * [Levenshtein automata and Unicode](#levenshtein-automata-and-unicode)
+    * [Regular expressions](#regular-expressions)
+    * [Set operations](#set-operations)
+    * [Raw transducers](#raw-transducers)
 
 ## Finite state machines as data structures
 
@@ -772,7 +781,618 @@ is very good.
 
 ## The FST library
 
+The `fst` crate (Rust's word for "compilation unit") I built is written in
+Rust, fast and memory conscious. It provides two convenient abstractions
+around ordered sets and ordered maps, while also providing raw access to the
+underlying finite state transducer. Loading sets and maps using memory maps is
+a first class feature, which makes it possible to query sets or maps without
+loading the entire data structure into memory first.
 
+The capabilities of ordered sets and maps mirror that of
+[`BTreeSet`](http://doc.rust-lang.org/std/collections/struct.BTreeSet.html)
+and
+[`BTreeMap`](http://doc.rust-lang.org/std/collections/struct.BTreeMap.html)
+found in Rust's standard library.
+The key difference is that sets and maps in `fst` are immutable, keys are fixed
+to byte sequences, and values, in the case of maps, are always unsigned 64 bit
+integers.
+
+In this section, we will tour the following topics:
+
+1. Building ordered sets and maps represented by finite state machines.
+2. Querying ordered sets and maps.
+3. Executing general automatons against a set or a map. We'll cover
+   Levenshtein automatons (for fuzzy searching) and regular expressions as two
+   interesting examples.
+4. Performing efficient streaming set operations (e.g., intersection and union)
+   on many sets or maps at once.
+5. A brief look at querying the transducer directly as a finite state machine.
+
+As such, this section will be very heavy on Rust code. I'll do my best to
+attach high level descriptions of what's going on in the code so that you don't
+need to know Rust in order to know what's happening. With that said, to get the
+most out of this section, I'd recommend reading the excellent
+[Rust Programming Language](https://doc.rust-lang.org/stable/book/)
+book.
+
+### Building ordered sets and maps
+
+Most data structures in Rust are mutable, which means queries, insertions and
+deletions are all bundled up neatly in a single API. Data structures built on
+the FSTs described in this blog post are unfortunately a different animal,
+because once they are built, they can no longer be modified. This makes a
+division between "build a set" and "query a set" a bit more justified.
+
+This division is reflected in the types exposed by the `fst` library. Among
+them are `Set` and `SetBuilder`, where the former is for querying and the
+latter is for insertion. Maps have a similar dichotomy with `Map` and
+`MapBuilder`.
+
+Let's get on to a simple example that builds a set and writes it to a file. A
+really important property of this code is that the set is written to the file
+as it is being constructed. At no time is the entire set actually stored in
+memory!
+
+(If you're not familiar with Rust, I've attempted to be a bit verbose in the
+comments.)
+
+{{< code-rust "build-set-file" >}}
+// Imports the `File` type into this scope and the entire `std::io` module.
+use std::fs::File;
+use std::io;
+
+// Imports the `SetBuilder` type from the `fst` module.
+use fst::SetBuilder;
+
+// Create a file handle that will write to "set.fst" in the current directory.
+let file_handle = try!(File::create("set.fst"));
+
+// Make sure writes to the file are buffered.
+let buffered_writer = io::BufWriter::new(file_handle);
+
+// Create a set builder that streams the data structure to set.fst.
+// We could use a socket here, or an in memory buffer, or anything that
+// is "writable" in Rust.
+let mut set_builder = try!(SetBuilder::new(buffered_writer));
+
+// Insert a few keys from the greatest band of all time.
+// An insert can fail in one of two ways: either a key was inserted out of
+// order or there was a problem writing to the underlying file.
+try!(set_builder.insert("bruce"));
+try!(set_builder.insert("clarence"));
+try!(set_builder.insert("stevie"));
+
+// Finish building the set and make sure the entire data structure is flushed
+// to disk. After this is called, no more inserts are allowed. (And indeed,
+// are prevented by Rust's type/ownership system!)
+try!(set_builder.finish());
+{{< /code-rust >}}
+
+(If you aren't familiar with Rust, you're probably wondering: what the heck is
+that `try!` thing? Well, in short, it's a macro that uses early returns and
+polymorphism to handle errors for us. The best way to think of it is: every
+time you see `try!`, it means the underlying operation may fail, and if it
+does, return the error value and stop executing the current function. I defer
+to the book for [more on error handling in
+Rust](https://doc.rust-lang.org/stable/book/error-handling.html).)
+
+At a high level, this code is:
+
+1. Creating a file and wrapping it in a buffer for fast writing.
+2. Create a `SetBuilder` that writes to the file we just created.
+3. Inserts keys into the set using the `SetBuilder::insert` method.
+4. Closes and set and flushes the data structure to disk.
+
+Sometimes though, we don't need or want to stream the set to a file on disk.
+Sometimes we just want to build it in memory and use it. That's possible too!
+
+{{< code-rust "build-set-memory" >}}
+use fst::{Set, SetBuilder};
+
+// Create a set builder that streams the data structure to memory.
+let mut set_builder = SetBuilder::memory();
+
+// Inserts are the same as before.
+// They can still fail if they are inserted out of order, but writes to the
+// heap are (mostly) guaranteed to succeed. Since we know we're inserting these
+// keys in the right order, we use "unwrap," which will panic or abort the
+// current thread of execution if it fails.
+set_builder.insert("bruce").unwrap();
+set_builder.insert("clarence").unwrap();
+set_builder.insert("stevie").unwrap();
+
+// Finish building the set and get back a region of memory that can be
+// read as an FST.
+let fst_bytes = try!(set_builder.into_inner());
+
+// And create a new Set with those bytes.
+// We'll cover this more in the next section on querying.
+let set = Set::from_bytes(fst_bytes).unwrap();
+{{< /code-rust >}}
+
+This code is mostly the same as before with two key differences:
+
+1. We no longer need to create a file. We just instruct the `SetBuilder` to
+   allocate a region of memory and use that instead.
+2. Instead of calling `finish` at the end, we call `into_inner` instead. This
+   does the same thing as calling `finish`, but it also gives us back the
+   region of memory that `SetBuilder` used to write the data structure to.
+   We then create a new `Set` from this region of memory, which could then be
+   used for querying.
+
+Let's now take a look at the same process, but for maps. It is almost exactly
+the same, except we now insert values with keys:
+
+{{< code-rust "build-map-memory" >}}
+use fst::{Map, MapBuilder};
+
+// Create a map builder that streams the data structure to memory.
+let mut map_builder = MapBuilder::memory();
+
+// Inserts are the same as before, except we include a value with each key.
+map_builder.insert("bruce", 1972).unwrap();
+map_builder.insert("clarence", 1972).unwrap();
+map_builder.insert("stevie", 1975).unwrap();
+
+// These steps are exactly the same as before.
+let fst_bytes = try!(map_builder.into_inner());
+let map = Map::from_bytes(fst_bytes).unwrap();
+{{< /code-rust >}}
+
+This is pretty much all there is to building ordered sets or maps represented
+by FSTs. There is API documentation for both
+[sets](http://burntsushi.net/rustdoc/fst/struct.SetBuilder.html)
+and
+[maps](http://burntsushi.net/rustdoc/fst/struct.MapBuilder.html).
+
+#### A builder shortcut
+
+In the examples above, we had to create a builder, insert keys one by one and
+then finally call `finish` or `into_inner` before we could declare the process
+done. This is often convenient in practice (for example, iterating over lines
+in a file), but it is not so convenient for presenting concise examples in a
+blog post. Therefore, we will use a small convenience.
+
+The following code builds a set in memory:
+
+{{< code-rust "build-set-shortcut" >}}
+use fst::Set;
+
+let set = try!(Set::from_iter(vec!["bruce", "clarence", "stevie"]));
+{{< /code-rust >}}
+
+This will achieve the same result as before. The only difference is that we
+are allocating a dynamically growable vector of elements before constructing
+the set, which is typically not advisable on large data.
+
+The same trick works for maps:
+
+{{< code-rust "build-map-shortcut" >}}
+use fst::Map;
+
+let map = try!(Map::from_iter(vec![
+  ("bruce", 1972),
+  ("clarence", 1972),
+  ("stevie", 1975),
+]));
+{{< /code-rust >}}
+
+### Querying ordered sets and maps
+
+Building an FST based data structure isn't exactly a model of convenience. In
+particular, many of the operations can fail, especially when writing the data
+structure directly to a file. Therefore, construction of an FST based data
+structure needs to do error handling.
+
+Thankfully, this is not the case for querying. Once a set or a map has been
+constructed, we can query it with reckless abandon.
+
+Sets are simple. The key operation is: "does the set contain this key?"
+
+{{< code-rust "query-set-contains" >}}
+use fst::Set;
+
+let set = try!(Set::from_iter(vec!["bruce", "clarence", "stevie"]));
+
+assert!(set.contains("bruce"));    // "bruce" is in the set
+assert!(!set.contains("andrew"));  // "andrew" is not
+
+// Another obvious operation: how many elements are in the set?
+assert_eq!(set.len(), 3);
+{{< /code-rust >}}
+
+Maps are once again very similar, but we can also access the value associated
+with the key.
+
+{{< code-rust "query-map-get" >}}
+use fst::Map;
+
+let map = try!(Map::from_iter(vec![
+  ("bruce", 1972),
+  ("clarence", 1972),
+  ("stevie", 1975),
+]));
+
+// Maps have `contains_key`, which is just like a set's `contains`:
+assert!(map.contains_key("bruce"));    // "bruce" is in the map
+assert!(!map.contains_key("andrew"));  // "andrew" is not
+
+// Maps also have `get`, which retrieves the value if it exists.
+// `get` returns an `Option<u64>`, which is something that can either be
+// empty (when the key does not exist) or present with the value.
+assert_eq!(map.get("bruce"), Some(1972)); // bruce joined the band in 1972
+assert_eq!(map.get("andrew"), None);      // andrew was never in the band
+{{< /code-rust >}}
+
+In addition to simple membership testing and key lookup, sets and maps also
+provide iteration over their elements. These are ordered sets and maps, so
+iteration yields elements in lexicographic order of the keys.
+
+{{< code-rust "query-set-stream" >}}
+use std::str::from_utf8; // converts UTF-8 bytes to a Rust string
+
+// We import the usual `Set`, but also include `Streamer`, which is a trait
+// that makes it possible to call `next` on a stream.
+use fst::{Streamer, Set};
+
+// Store the keys somewhere so that we can compare what we get with them and
+// make sure they're the same.
+let keys = vec!["bruce", "clarence", "danny", "garry", "max", "roy", "stevie"];
+
+// Pass a reference with `&keys`. If we had just used `keys` instead, then it
+// would have *moved* into `Set::from_iter`, which would prevent us from using
+// it below to check that the keys we got are the same as the keys we gave.
+let set = try!(Set::from_iter(&keys));
+
+// Ask the set for a stream of all of its keys.
+let mut stream = set.stream();
+
+// Iterate over the elements and collect them.
+let mut got_keys = vec![];
+while let Some(key) = stream.next() {
+    // Keys are byte sequences, but the keys we inserted are strings.
+    // Strings in Rust are UTF-8 encoded, so we need to decode here.
+    let key = try!(from_utf8(key)).to_owned();
+    got_keys.push(key);
+}
+assert_eq!(keys, got_keys);
+{{< /code-rust >}}
+
+(If you're a Rustacean and you're wondering why in the heck we're using `while
+let` here instead of a `for` loop or an iterator adapter, then it is time to
+let you in on a dirty little secret: the `fst` crate doesn't expose iterators.
+Instead, it exposes *streams*. The technical justification is explained at
+length on the [documentation for the `Streamer`
+trait](http://burntsushi.net/rustdoc/fst/trait.Streamer.html).)
+
+In this example, we're asking the set for a stream, which lets us iterate over
+all of the keys in the set in order. The stream yields a *reference* to an
+internal buffer maintained by the stream. In Rust, this is a totally safe thing
+to do, because the type system will prevent you from calling `next` on a stream
+if a reference to its internal buffer is still alive (at compile time). This
+means that you as the consumer get to control whether all of the keys are
+stored in memory (as in this example), or if your task only requires a single
+pass over the data, then you never need to allocate space for each key. This
+style of iteration is called *streaming* because ownership of the elements is
+tied to the iteration itself.
+
+It is important to note that this process is distinctly different from other
+data structures such as `BTreeSet`. Namely, a tree based data structure
+usually has a separate location allocated for each key, so it can simply
+return a reference to that allocation. That is, ownership of elements yielded
+by iteration is tied to the *data structure*. We can't achieve this style of
+iteration with FST based data structures without an unacceptable cost for each
+iteration. Namely, an FST does not store each key in its own location. Recall
+from the first part of this article that keys are stored in the transitions
+of the finite state machine. Therefore, the keys are *constructed during the
+process of iteration*.
+
+OK, back to querying. In addition to iterating over all the keys, we can also
+iterate over a subset of the keys efficienty with *range queries*. Here's an
+example that builds on the previous one.
+
+{{< code-rust "query-set-range" >}}
+// We now need the IntoStreamer trait, which provides a way to convert a
+// range query into a stream.
+use fst::{IntoStreamer, Streamer, Set};
+
+// Same as previous example.
+let keys = vec!["bruce", "clarence", "danny", "garry", "max", "roy", "stevie"];
+let set = try!(Set::from_iter(&keys));
+
+// Build a range query that includes all keys greater than or equal to `c`
+// and less than or equal to `roy`.
+let range = set.range().ge("c").le("roy");
+
+// Turn the range into a stream.
+let stream = range.into_stream();
+
+// Use a convenience method defined on streams to collect the elements in the
+// stream into a sequence of strings. This is effectively a shorter form of the
+// `while let` loop we wrote out in the previous example.
+let got_keys = try!(stream.into_strs());
+
+// Check that we got the right keys.
+assert_eq!(keys[1..6].to_vec(), got_keys);
+{{< /code-rust >}}
+
+The key line in the above example was this:
+
+{{< high rust >}}
+let range = set.range().ge("c").le("roy");
+{{< /high >}}
+
+The method `range` returns a new range query, and the `ge` and `le` methods set
+the greater-than-or-equal and less-than-or-equal to bounds, respectively. There
+are also `gt` and `lt` methods, which set greater-than and less-than bounds,
+respectively. Any combination of these methods can be used (if one is used more
+than once, the last one overwrites the previous one).
+
+Once the range query is built, it can be turned into a stream easily:
+
+{{< high rust >}}
+let stream = range.into_stream();
+{{< /high >}}
+
+Once we have a stream, we can iterate over it using the `next` method and a
+`while let` loop, as we saw in a previous example. In this example, we instead
+called the `into_strs` method, which does the iteration and UTF-8 decoding for
+you, returning the results in a vector.
+
+The same methods are available on maps as well, except the iteration yields
+tuples of keys and values instead of just the key.
+
+### Memory maps
+
+Remember the first example for `SetBuilder` where we *streamed* the data
+structure straight to a file? It turns out that this is a really important use
+case for FST based data structures specifically because their wheelhouse is
+*huge* collections of keys. Being able to write the data structure as it's
+constructed straight to disk without storing the entire data structure in
+memory is a really nice convenience.
+
+Can we do something similar for reading a set from disk? Certainly, opening the
+file, reading its contents and using that to create a `Set` is possible:
+
+{{< code-rust "read-set-mmap" >}}
+use std::fs::File;
+use std::io::Read;
+
+use fst::Set;
+
+// Open a handle to a file and read its entire contents into memory.
+let mut file_handle = try!(File::open("set.fst"));
+let mut bytes = vec![];
+try!(file_handle.read_to_end(&mut bytes));
+
+// Construct the set.
+let set = try!(Set::from_bytes(bytes));
+
+// Finally, we can query.
+println!("number of elements: {}", set.len());
+{{< /code-rust >}}
+
+The expensive part of this code is having to read the entire file into memory.
+The call to `Set::from_bytes` is actually quite fast. It reads a little bit of
+meta data encoded into the FST and does a simplistic checksum. In fact, this
+process only requires looking at 32 bytes!
+
+One possible way to mitigate this is to teach the FST data structure how to
+read directly from a file. In particular, it would know to issue `seek` system
+calls to jump around in the file to traverse the finite state machine.
+Unfortunately, this can be prohibitively expensive because calling `seek` would
+happen very frequently. Every `seek` entails the overhead of a system call,
+which would likely make searching the FST prohibitively slow.
+
+Another way to mitigate this is to maintain a cache that is bounded in
+size and stores chunks of the file in memory, but probably not all of it. When
+a region of the file needs to be accessed that's not in the cache, a chunk of
+the file that includes that region is read and added to the cache (possibly
+evicting a chunk that hasn't been accessed in a while). When we access that
+region again and it is already in the cache, then no I/O is required. This
+approach also enables us to be smart about what is stored in memory. Namely,
+we could make sure all chunks near the initial state of the machine are in
+the cache, since those would in theory be the most frequently accessed.
+Unfortunately, this approach is complex to implement and has
+[other problems](https://www.varnish-cache.org/trac/wiki/ArchitectNotes).
+
+A third way is something called a
+[memory mapped file](https://en.wikipedia.org/wiki/Memory-mapped_file).
+When a memory mapped file is created, it is exposed to us as if it were a
+sequence of bytes in memory. When we access this region of memory, it's
+possible that there is no actual data there from the file to be read yet. This
+causes a *page fault* which tells the operating system to read a chunk from the
+file and make it available for use in the sequence of bytes exposed to the
+program. The operating system is then in charge of which pieces of the file are
+actually in memory. The actual process of reading data from the file and
+storing it in memory is transparent to our program---all the `fst` crate sees
+is a normal sequence of bytes.
+
+This third way is actually very similar to our idea above with a cache. The key
+difference is that the operating system manages the cache instead of us. This
+is a dramatic simplification in the implementation. Of course, there are some
+costs. Since the operating system manages the cache, it can't know that certain
+parts of the FST should always stay in memory. Therefore, on occasion, we may
+not have optimal query times.
+
+The `fst` crate supports using memory maps. Here is our previous example, but
+modified to use a memory map:
+
+{{< code-rust "read-set-file" >}}
+use fst::Set;
+
+// Construct the set from a file path.
+// The fst crate implements this using a memory map.
+let set = try!(Set::from_path("set.fst"));
+
+// Finally, we can query. This can happen immediately, without having
+// to read the entire set into memory.
+println!("number of elements: {}", set.len());
+{{< /code-rust >}}
+
+That's all there is to it. Querying remains the same. The fact that a memory
+map is being used is completely transparent to your program.
+
+There is one more cost worth mentioning here. The format used to represent an
+FST in memory militates toward random access of the data. Namely, looking up a
+key may jump around to different regions of the FST that are not close to each
+other at all. This means that reading an FST from disk through a memory map can
+be costly because random access I/O is slow. This is particularly true when
+using a non-solid state disk since random access will require a lot of phyiscal
+seeking. If you find yourself in this situation and the operating system's page
+cache can't compensate, then you may need to pay the upfront cost and load the
+entire FST into memory. Note that this isn't quite a death sentence, since the
+purpose of an FST is to be very small. For example, an FST with millions of
+keys can fit in a few megabytes of memory. (e.g., All 3.5 million unique words
+from Project Gutenberg's entire corpus occupies only 22 MB.)
+
+### Levenshtein automata
+
+Given a collection of strings, one really useful operation is *fuzzy
+searching*. There are many different types of fuzzy searching, but we will only
+cover one here: fuzzy search by Levenshtein or "edit" distance.
+
+Levenshtein distance is a way to compare two strings. Namely, given strings `A`
+and `B`, the edit distance of `A` and `B` is the number of character
+insertions, deletions and substitutions one must perform to transform `A` into
+`B`. Here are some simple examples:
+
+* `dist("foo", "foo") == 0` (no change)
+* `dist("foo", "fo") == 1` (one deletion)
+* `dist("foo", "foob") == 1` (one insertion)
+* `dist("foo", "fob") == 1` (one substitution)
+* `dist("foo", "fobo") == 2` (one substitution, one insertion)
+
+There are a
+[variety of ways](https://en.wikipedia.org/wiki/Levenshtein_distance#Computing_Levenshtein_distance)
+to implement an algorithm that computes the edit distance between two strings.
+To a first approximation, the best one can do is `O(mn)` time, where `m` and
+`n` are the lengths of the strings being compared.
+
+For our purposes, the question we'd like to answer is: does this key match any
+of the keys in the set up to an edit distance of `n`?
+
+Certainly, we could implement an algorithm to compute edit distance between two
+strings, iterate over the keys in one of our FST based ordered sets, and run
+the algorithm for each key. If the distance between the query and the key is
+`<= n`, then we emit it as a match. Otherwise, we skip the key and move on to
+the next.
+
+The problem with this approach is that it is incredibly slow. It requires
+running an effectively quadratic algorithm over every key in the set. Not good.
+
+It turns out that for our specific use case, we can do *a lot* better than
+that. Namely, in our case, one of the strings in every distance computation for
+a single search is *fixed*; the query remains the same. Given these conditions,
+and a known distance threshold, we can build an automaton that recognizes all
+strings that match our query.
+
+Why is that useful? Well, our FST based ordered set *is* an automaton! That
+means answering the question with our ordered set is no different than taking
+the intersection of two automatons. This is *really* fast.
+
+Here is a quick example that demonstrates a fuzzy search on an ordered set.
+
+{{< code-rust "levenshtein" >}}
+// We've seen all these imports before except for Levenshtein.
+// Levenshtein is a type that knows how to build Levenshtein automata.
+use fst::{IntoStreamer, Streamer, Levenshtein, Set};
+
+let keys = vec!["fa", "fo", "fob", "focus", "foo", "food", "foul"];
+let set = try!(Set::from_iter(keys));
+
+// Build our fuzzy query. This says to search for "foo" and return any keys
+// that have a Levenshtein distance from "foo" of no more than 1.
+let lev = try!(Levenshtein::new("foo", 1));
+
+// Apply our fuzzy query to the set we built and turn the query into a stream.
+let stream = set.search(lev).into_stream();
+
+// Get the results and confirm that they are what we expect.
+let keys = try!(stream.into_strs());
+assert_eq!(keys, vec![
+    "fo",   // 1 deletion
+    "fob",  // 1 substitution
+    "foo",  // 0 insertions/deletions/substitutions
+    "food", // 1 insertion
+]);
+{{< /code-rust >}}
+
+A really important property of using an automaton to search our set is that it
+can efficiently rule out entire regions of our set to search. Namely, if our
+query is `food` with a distance threshold of `1`, then it won't ever visit keys
+in the underlying FST with a length greater than `5` precisely because such
+keys will never meet our search criteria. It can also skip many other keys, for
+example, any keys starting with two letters that are neither `f` nor `o`. Such
+keys can also never match our search criteria because they already exceed the
+distance threshold.
+
+Unfortunately, talking about exactly how Levenshtein automata are implemented
+is beyond the scope of this article. The implementation is based in part on the
+[insights from Jules
+Jacobs](http://julesjacobs.github.io/2015/06/17/disqus-levenshtein-simple-and-fast.html).
+However, there is a part of this implementation that is worth talking about:
+Unicode.
+
+### Levenshtein automata and Unicode
+
+In the previous section, we saw an example of some code that builds a
+[Levenshtein automaton](https://en.wikipedia.org/wiki/Levenshtein_automaton),
+which can be used to fuzzily search an ordered set or map in the `fst` crate.
+
+A really important detail that we glossed over is how the Levenshtein distance
+is actually defined. Here is what I said, emphasis added:
+
+> Levenshtein distance is a way to compare two strings. Namely, given strings
+`A` and `B`, the edit distance of `A` and `B` is the number of ***character***
+insertions, deletions and substitutions one must perform to transform `A` into
+`B`.
+
+What exactly is a "character" and how do our FST based ordered sets and maps
+handle it? There is no one true canonical definition of what a character is,
+and therefore, it was a poor choice of words for technical minds. A better
+word, which reflects the actual implementation, is the number of ***Unicode
+codepoints***. That is, the edit distance is the number of Unicode codepoint
+insertions, deletions or substitutions to transform one key into another.
+
+Unfortunately, there isn't enough space to go over Unicode here, but
+[Introduction to
+Unicode](http://mathias.gaunard.com/unicode/doc/html/unicode/introduction_to_unicode.html)
+is an informative read that succinctly defines important terminology.
+[David C. Zentgraf's write up](http://kunststube.net/encoding/) is also good,
+but much longer and more detailed. The important points are as follows:
+
+
+1. A Unicode codepoint approximates something we humans think of as a
+   character.
+2. This is not true in general, since multiple codepoints may build something
+   that we humans think of as a *single* character. In Unicode, these
+   combinations of codepoints are called *grapheme clusters*.
+3. A codepoint is a 32 bit number that can be encoded in a variety of ways. The
+   encoding Rust biases toward is UTF-8, which represents every possible
+   codepoint by 1, 2, 3 or 4 bytes.
+
+Our choice to use codepoints is a natural trade off between correctness,
+implementation complexity and performance. The *simplest* thing to implement is
+to assume that every single character is represented by a single byte. But what
+happens when a key contains `☃` (a Unicode snowman, which is a single
+codepoint), which is encoded as 3 bytes in UTF-8? The user sees it as a single
+character, but the Levenshtein automaton would see it as **3** characters.
+That's bad.
+
+Since our FSTs are indeed *byte based* (i.e., every transition in the
+transducer corresponds to exactly one byte), that implies that our
+Levenshtein automaton must have *UTF-8 decoding built into it*. The
+implementation I wrote is based on a trick employed by Russ Cox for
+[RE2](https://github.com/google/re2) (who, in turn, got it from Ken
+Thompson's `grep`). You can read more about it in the documentation of the
+[`utf8-ranges`](http://burntsushi.net/rustdoc/utf8_ranges/) crate.
+
+### Regular expressions
+
+### Set operations
+
+### Raw transducers
 
 <!--
 Initial number of urls: 7,563,934,593

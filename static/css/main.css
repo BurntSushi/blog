@@ -501,6 +501,10 @@ Copyright (c) 2014 Daniel Eden
   text-align: center;
 }
 
+div.highlight {
+  margin-bottom: 15px;
+}
+
 .named-code {
 }
 
