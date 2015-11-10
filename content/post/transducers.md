@@ -124,6 +124,8 @@ the performance of finite state machines as a data structure.
     * [Regular expressions](#regular-expressions)
     * [Set operations](#set-operations)
     * [Raw transducers](#raw-transducers)
+* [The FST command line tool](#the-fst-command-line-tool)
+    * [Brief introduction](#brief-introduction)
 
 ## Finite state machines as data structures
 
@@ -815,6 +817,10 @@ most out of this section, I'd recommend reading the excellent
 [Rust Programming Language](https://doc.rust-lang.org/stable/book/)
 book.
 
+Additionally, you may also find it useful to keep the
+[`fst` API documentation](http://burntsushi.net/rustdoc/fst/index.html)
+handy, which may act as a nice supplement to the material in this section.
+
 ### Building ordered sets and maps
 
 Most data structures in Rust are mutable, which means queries, insertions and
@@ -1388,11 +1394,394 @@ implementation I wrote is based on a trick employed by Russ Cox for
 Thompson's `grep`). You can read more about it in the documentation of the
 [`utf8-ranges`](http://burntsushi.net/rustdoc/utf8_ranges/) crate.
 
+A really cool property that falls out of this approach is that if you execute a
+Levenshtein query using this crate, than all keys are guaranteed to be valid
+UTF-8. If a key isn't valid UTF-8, then the Levenshtein automaton simply would
+not match it.
+
 ### Regular expressions
+
+Another type of query we might want to run on our FST based data structures is
+a *regular expression*. Put simply, a regular expression is a simple pattern
+syntax that describes regular languages. For example, the regular expression
+`[0-9]+(foo|bar)` matches any text that starts with one or more numeric digits
+followed by either `foo` or `bar`.
+
+It sure would be nice to search our sets or maps using a regular expression.
+One way to do it would be to iterate over all of the keys and apply the regular
+expression to each key. If there's no match, skip the key. Unfortunately, this
+will be quite slow. Rust's regular expressions are no slouch, but executing a
+regular expression millions on times on small strings is bound to be slow. More
+importantly, using this approach, we *must* visit every key in the set. For a
+large set, this might make a regular expression query not feasible.
+
+As with computing Levenshtein distance in the previous section, it turns out we
+can do a lot better than that. Namely, since our regular expression stays the
+same throughout our search, we can pre-compute an *automaton* that knows how to
+match any text against the regular expression. Since our sets and maps are
+themselves automatons, this means we can very efficiently search our data
+structures by intersecting the two automatons.
+
+Here's a simple example:
+
+{{< code-rust "regex" >}}
+// We've seen all these imports before except for Regex.
+// Regex is a type that knows how to build regular expression automata.
+use fst::{IntoStreamer, Streamer, Regex, Set};
+
+let keys = vec!["123", "food", "xyz123", "τροφή", "еда", "מזון", "☃☃☃"];
+let set = try!(Set::from_iter(keys));
+
+// Build a regular expression. This can fail if the syntax is incorrect or
+// if the automaton becomes too big.
+// This particular regular expression matches keys that are not empty and
+// only contain letters. Use of `\pL` here stands for "any Unicode codepoint
+// that is considered a letter."
+let lev = try!(Regex::new(r"\pL+"));
+
+// Apply our regular expression query to the set we built and turn the query
+// into a stream.
+let stream = set.search(lev).into_stream();
+
+// Get the results and confirm that they are what we expect.
+let keys = try!(stream.into_strs());
+
+// Notice that "123", "xyz123" and "☃☃☃" did not match.
+assert_eq!(keys, vec![
+    "food",
+    "τροφή",
+    "еда",
+    "מזון",
+]);
+{{< /code-rust >}}
+
+In this example, we show how to execute a regular expression query against an
+ordered set. The regular expression is `\pL+`, which will only match non-empty
+keys that correspond to a sequence of UTF-8 encoded codepoints that are
+considered letters. Digits like `2` and cool symbols like `☃` (Unicode snowman)
+aren't considered letters, so the keys that contain those symbols don't match
+our regular expression.
+
+Regular expression queries share two important similarities with Levenshtein
+queries:
+
+1. A regular expression can only match keys which are valid UTF-8. This means
+   that all keys returned by a regular expression query are guaranteed to be
+   valid UTF-8. The regular expression automaton guarantees this in the same
+   way that the Levenshtein automaton guarantees it: it builds UTF-8 decoding
+   into the automaton itself.
+2. A regular expression query will not necessarily visit all keys in the set.
+   Namely, keys like `123` that don't begin with a letter are ruled out
+   immediately. A key like `xyz123` is ruled out as soon as `1` is seen.
+
+As with Levenshtein automata, we unfortunately won't talk about how the
+automaton is implemented. In fact, this topic is quite big, and
+[Russ Cox's series of articles on the topic](https://swtch.com/~rsc/regexp/)
+is authoritative. It's also worth noting that thanks to the
+[`regex-syntax`](http://doc.rust-lang.org/regex/regex_syntax/index.html)
+crate, it was actually feasible to do this. This way, we are guaranteed to
+share the same exact syntax as Rust's
+[`regex`](http://doc.rust-lang.org/regex/regex/index.html)
+crate. (A regular expression parser is often one of the more difficult aspects
+of the implementation!)
+
+One final note: it is very easy to write a regular expression that will take a
+long time to match on a large set. For example, if the regular expression
+starts with `.*` (which means "match zero or more Unicode codepoints"), then it
+will likely result in visiting every key in the automaton.
 
 ### Set operations
 
+There is one last thing we need to talk about to wrap up basic querying: set
+operations. Some common set operations supported by the `fst` crate are union,
+intersection, difference and symmetric difference. All of these operations can
+work efficiently on *any number of sets or maps*.
+
+This is particularly useful if you have multiple sets or maps on disk that
+you'd like to search. Since the `fst` crate encourages memory mapping them, it
+means we can search many sets nearly instantly.
+
+Let's take a look at an example that searches multiple FSTs and combines
+the search results into a single stream.
+
+{{< code-rust "setop" >}}
+use std::str::from_utf8;
+
+use fst::{Streamer, Set};
+use fst::set;
+
+// Create 5 sets. As a convenience, these are stored in memory, but they could
+// just as easily have been memory mapped from disk using `Set::from_path`.
+let set1 = try!(Set::from_iter(&["AC/DC", "Aerosmith"]));
+let set2 = try!(Set::from_iter(&["Bob Seger", "Bruce Springsteen"]));
+let set3 = try!(Set::from_iter(&["George Thorogood", "Golden Earring"]));
+let set4 = try!(Set::from_iter(&["Kansas"]));
+let set5 = try!(Set::from_iter(&["Metallica"]));
+
+// Build a set operation. All we need to do is add a stream from each set and
+// ask for the union. (Other operations, such as `intersection`, are also
+// available.)
+let mut stream =
+    set::OpBuilder::new()
+    .add(&set1)
+    .add(&set2)
+    .add(&set3)
+    .add(&set4)
+    .add(&set5)
+    .union();
+
+// Now collect all of the keys. `stream` is just like any other stream that
+// we've seen before.
+let mut keys = vec![];
+while let Some(key) = stream.next() {
+    let key = try!(from_utf8(key)).to_owned();
+    keys.push(key);
+}
+assert_eq!(keys, vec![
+    "AC/DC", "Aerosmith", "Bob Seger", "Bruce Springsteen",
+    "George Thorogood", "Golden Earring", "Kansas", "Metallica",
+]);
+{{< /code-rust >}}
+
+This example builds 5 different sets in memory, creates a new set operation,
+adds a stream from each set to the build and then asks for the union of all
+of the streams.
+
+The `union` set operation, like all the others, are implemented in a streaming
+fashion. That is, none of the operations require storing all of the keys in
+memory precisely because the keys in each set are ordered. (The actual
+implementation uses a data structure called a [binary
+heap](https://en.wikipedia.org/wiki/Binary_heap).)
+
+The cool thing about streams is that they are composable. In particular, it
+would be very sad if you were only limited to taking the union of entire sets.
+Instead, you can actually issue any type of query on the sets and take the
+union.
+
+Here's the same example as above, but with a regular expression that only
+matches keys with at least one space in them:
+
+{{< code-rust "setop-regex" >}}
+use std::str::from_utf8;
+
+use fst::{Streamer, Regex, Set};
+use fst::set;
+
+// Create 5 sets. As a convenience, these are stored in memory, but they could
+// just as easily have been memory mapped from disk using `Set::from_path`.
+let set1 = try!(Set::from_iter(&["AC/DC", "Aerosmith"]));
+let set2 = try!(Set::from_iter(&["Bob Seger", "Bruce Springsteen"]));
+let set3 = try!(Set::from_iter(&["George Thorogood", "Golden Earring"]));
+let set4 = try!(Set::from_iter(&["Kansas"]));
+let set5 = try!(Set::from_iter(&["Metallica"]));
+
+// Build our regular expression query.
+let spaces = try!(Regex::new(r".*\s.*"));
+
+// Build a set operation. All we need to do is add a stream from each set and
+// ask for the union. (Other operations, such as `intersection`, are also
+// available.)
+let mut stream =
+    set::OpBuilder::new()
+    .add(set1.search(&spaces))
+    .add(set2.search(&spaces))
+    .add(set3.search(&spaces))
+    .add(set4.search(&spaces))
+    .add(set5.search(&spaces))
+    .union();
+
+// This is the same as the previous example, except our search narrowed our
+// results down a bit.
+let mut keys = vec![];
+while let Some(key) = stream.next() {
+    let key = try!(from_utf8(key)).to_owned();
+    keys.push(key);
+}
+assert_eq!(keys, vec![
+    "Bob Seger", "Bruce Springsteen", "George Thorogood", "Golden Earring",
+]);
+{{< /code-rust >}}
+
+Building a set operation works with any type of stream. Some streams might
+be regular expression queries, others might be Levenshtein queries and still
+others might be range queries.
+
+This section covers sets, but we've left out maps. Maps are somewhat more
+complex, because the stream produced by a set operation on the map's keys must
+also include the values associated with each key. In particular, for a union
+operation, each key emitted in the stream may have occurred in more than one of
+the maps given. I will defer to
+[`fst`'s API documentation for a map
+union](file:///home/andrew/rust/fst/target/doc/fst/map/struct.OpBuilder.html#method.union),
+which contains an example.
+
 ### Raw transducers
+
+All of the code examples we've seen so far have used either the `Set` or `Map`
+data types in the `fst` crate. In fact, there is little of interest in the
+implementations of `Set` or `Map`, as both of them simply wrap the `Fst` type.
+Indeed, their representation is:
+
+{{< high "rust" >}}
+// The Fst type is tucked away in the `raw` sub-module.
+use fst::raw::Fst;
+
+// These type declarations define sets and maps as nothing more than structs
+// with a single member: an Fst.
+pub struct Set(Fst);
+pub struct Map(Fst);
+{{< /high >}}
+
+In other words, the `Fst` type is where all the action is. For the most part,
+building an Fst and querying it follow the same pattern as sets and maps.
+Here's an example:
+
+{{< code-rust "fst-build" >}}
+use fst::raw::{Builder, Fst, Output};
+
+// The Fst type has a separate builder just like sets and maps.
+let mut builder = Builder::memory();
+builder.insert("bar", 1).unwrap();
+builder.insert("baz", 2).unwrap();
+builder.insert("foo", 3).unwrap();
+
+// Finish construction and get the raw bytes of the fst.
+let fst_bytes = try!(builder.into_inner());
+
+// Create an Fst that we can query.
+let fst = try!(Fst::from_bytes(fst_bytes));
+
+// Basic querying.
+assert!(fst.contains_key("foo"));
+assert_eq!(fst.get("abc"), None);
+
+// Looking up a value returns an `Output` instead of a `u64`.
+// This is the internal representation of an output on a transition.
+// The underlying u64 can be accessed with the `value` method.
+assert_eq!(fst.get("baz"), Some(Output::new(2)));
+
+// Methods like `stream`, `range` and `search` are also available, which
+// function the same way as they do for sets and maps.
+{{< /code-rust >}}
+
+If you've been following along, this code should look mostly familiar by now.
+One key difference is that `get` returns an `Output` instead of a `u64`.
+An `Output` is exposed because it is the internal representation of an output
+on a transition in the finite state transducer. If `out` has type `Output`,
+then one can get the underlying number value by calling `out.value()`.
+
+The key feature of the `Fst` type is the access it gives you to the underlying
+finite state machine. Namely, the `Fst` type has two important methods
+available to you:
+
+* `root()` returns the start state or "node" of the underlying machine.
+* `node(addr)` returns the state or "node" at the given address.
+
+Nodes provide the ability to traverse all of its transitions and ask whether it
+is a final state or not. For example, consider tracing the path of the key
+`baz` through the FST:
+
+{{< code-rust "fst-node" >}}
+use fst::raw::{Builder, Fst};
+
+let mut builder = Builder::memory();
+builder.insert("bar", 1).unwrap();
+builder.insert("baz", 2).unwrap();
+builder.insert("foo", 3).unwrap();
+let fst_bytes = try!(builder.into_inner());
+let fst = try!(Fst::from_bytes(fst_bytes));
+
+// Get the root node of this FST.
+let root = fst.root();
+
+// Print the transitions out of the root node.
+// outputs "b" followed by "f"
+for transition in root.transitions() {
+    println!("{}", transition.inp as char);
+}
+
+// Find the position of a transition based on the input.
+let i = root.find_input(b'b').unwrap();
+
+// Get the transition.
+let trans = root.transition(i);
+
+// Get the node that the transition points to.
+let node = fst.node(trans.addr);
+
+// And so on...
+{{< /code-rust >}}
+
+With these tools, we can actually show how to implement the `contains_key`
+method!
+
+{{< code-rust "fst-contains" >}}
+use fst::raw::Fst;
+
+// The function takes a reference to an Fst and a key and returns true if
+// and only if the key is in the Fst.
+fn contains_key(fst: &Fst, key: &[u8]) -> bool {
+    // Start the search at the root node.
+    let mut node = fst.root();
+    // Iterate over every byte in the key.
+    for b in key {
+        // Look for a transition in this node for this byte.
+        match node.find_input(*b) {
+            // If one cannot be found, we can conclude that the key is not
+            // in this FST and quit early.
+            None => return false,
+            // Otherwise, we set the current node to the node that the found
+            // transition points to. In other words, we "advance" the finite
+            // state machine.
+            Some(i) => {
+                node = fst.node(node.transition_addr(i));
+            }
+        }
+    }
+    // After we've exhausted the key to look up, it is only in the FST if we
+    // ended at a final state.
+    node.is_final()
+}
+{{< /code-rust >}}
+
+And that's pretty much all there is to it. The
+[`Node` type has a few more useful
+documented methods](http://burntsushi.net/rustdoc/fst/raw/struct.Node.html)
+that you may want to peruse.
+
+## The FST command line tool
+
+I created the FST command line tool as a way to easily play with data and a
+demo of how to use the underlying library. I don't necessarily intend for it to
+be particularly useful all on its own, but it will do nicely as a way to drive
+experiments on real data in this blog post.
+
+In this section, I'll do a very brief overview of the command and then jump
+right into experiments with real data.
+
+### Brief introduction
+
+The `fst` command line tool has several commands. Some of them are serve a
+purely diagnostic role (i.e., "I want to look at a particular state in the
+underlying transducer") while others are more utilitarian. In this article,
+we'll focus on the latter.
+
+Here are the commands:
+
+* `dot` - Outputs an FST to the "dot" format, which can be used by GraphViz to
+  render a visual display of the image. I used this utility to create many of
+  the images in this blog post.
+* `fuzzy` - Run a fuzzy query based on edit distance against an FST.
+* `grep` - Run a regular expression query against an FST.
+* `range` - Run a range query against an FST.
+* `set` - Create an ordered set represented by an FST. Its input is simple a
+  list of lines. It takes unsorted data by default, but can build the FST
+  faster when given sorted data and passed the `--sorted` flag.
+* `map` - The same as `set`, except it takes a CSV file, where the first column
+  is the key and the second column is an integer value.
+
+The `set` and `map` commands are crucial, because they provide a means to build
+FSTs from plain data.
 
 <!--
 Initial number of urls: 7,563,934,593

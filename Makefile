@@ -20,7 +20,7 @@ IMG_MAP = $(foreach f,$(wildcard data/transducers/maps/*), static/images/transdu
 code-transducers:
 	./scripts/rust-from-blog content/post/transducers.md
 	cargo update --manifest-path ./code/transducers/Cargo.toml
-	cargo build --manifest-path ./code/transducers/Cargo.toml
+	cargo build --release --manifest-path ./code/transducers/Cargo.toml
 
 img-transducers: $(IMG_HAND_WRITTEN) $(IMG_SET) $(IMG_MAP)
 

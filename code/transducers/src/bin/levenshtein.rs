@@ -12,11 +12,13 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   let set = try!(Set::from_iter(keys));
   
   // Build our fuzzy query. This says to search for "foo" and return any keys
-  // that have an Levenshtein distance from "foo" of no more than 1.
+  // that have a Levenshtein distance from "foo" of no more than 1.
   let lev = try!(Levenshtein::new("foo", 1));
   
-  // Apply our fuzzy query to the set we built.
+  // Apply our fuzzy query to the set we built and turn the query into a stream.
   let stream = set.search(lev).into_stream();
+  
+  // Get the results and confirm that they are what we expect.
   let keys = try!(stream.into_strs());
   assert_eq!(keys, vec![
       "fo",   // 1 deletion
