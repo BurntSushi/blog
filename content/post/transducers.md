@@ -2143,8 +2143,9 @@ about each page crawled, and don't include the actual raw document. Among that
 meta data is a URL, which is exactly what I'm after.
 
 Despite narrowing the scope, downloading this much data over a cable modem with
-a 2 MB/s connection won't be fun. So I spun up a `c4.8xlarge` and started
-downloading all URLs from the July 2015 crawl archive with this shell script:
+a 2 MB/s connection won't be fun. So I spun up a `c4.8xlarge` EC2 instance and
+started downloading all URLs from the July 2015 crawl archive with this shell
+script:
 
 {{< high sh >}}
 #!/bin/bash
