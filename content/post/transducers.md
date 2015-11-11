@@ -25,8 +25,8 @@ Along the way, we will talk about memory maps, automaton intersection with
 regular expressions, fuzzy searching with Levenshtein distance and streaming
 set operations.
 
-**Target audience**: Some familiarity with programming. No experience with
-automata theory or Rust is required.
+**Target audience**: Some familiarity with programming and fundamental data
+structures. No experience with automata theory or Rust is required.
 
 <!--more-->
 
