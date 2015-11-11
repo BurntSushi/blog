@@ -39,7 +39,7 @@ Wikipedia article titles (`384 MB`). Here's how to index them:
 {{< high sh >}}
 $ time fst set --sorted wiki-titles wiki-titles.fst
 
-real    0m19.412s
+real    0m18.310
 {{< /high >}}
 
 The resulting index, `wiki-titles.fst`, is `157 MB`. By comparison, `gzip`
@@ -125,7 +125,18 @@ the performance of finite state machines as a data structure.
     * [Set operations](#set-operations)
     * [Raw transducers](#raw-transducers)
 * [The FST command line tool](#the-fst-command-line-tool)
+    * [How to get it](#how-to-get-it)
     * [Brief introduction](#brief-introduction)
+    * [Experiments](#experiments)
+        * [The dictionary](#the-dictionary)
+        * [Gutenberg](#gutenberg)
+        * [Wikipedia titles](#wikipedia-titles)
+        * [DOI urls](#doi-urls)
+        * [Common crawl](#common-crawl)
+* [Lessons and trade offs](#lessons-and-trade-offs)
+    * [Not a general purpose data structure](#not-a-general-purpose-data-structure)
+    * [More useful on 64 bit systems](#more-useful-on-64-bit-systems)
+    * [Requires fast random access](#requires-fast-random-access)
 
 ## Finite state machines as data structures
 
@@ -1759,6 +1770,30 @@ experiments on real data in this blog post.
 In this section, I'll do a very brief overview of the command and then jump
 right into experiments with real data.
 
+### How to get it
+
+Unless you're dying to play with the tool, it's not necessary for you to
+download it. Namely, in this section I'll show the commands I'm running along
+with their outputs when possible.
+
+Currently, the only way to get the command is to compile it from source. To do
+that, you will first need to [install Rust and
+Cargo](https://www.rust-lang.org/downloads.html). (The current stable release
+of Rust will work. The release distribution includes both Rust and Cargo.)
+
+Once Rust is installed, clone the `fst` repo and build:
+
+{{< high sh >}}
+$ git clone git://github.com/BurntSushi/fst
+$ cd fst
+$ cargo build --release --manifest-path ./fst-bin/Cargo.toml
+{{< /high >}}
+
+On my somewhat beefy system, compilation takes a little under a minute.
+
+Once compilation is done, the `fst` binary will be located at
+`./fst-bin/target/release/fst`.
+
 ### Brief introduction
 
 The `fst` command line tool has several commands. Some of them are serve a
@@ -1783,6 +1818,471 @@ Here are the commands:
 The `set` and `map` commands are crucial, because they provide a means to build
 FSTs from plain data.
 
+Let's start with a simple example that we can easily visualize. Consider a map
+from month abbreviation to its numeric position in the Gregorian calendar. Our
+raw data is a simple CSV file:
+
+{{< high text >}}
+jan,1
+feb,2
+mar,3
+apr,4
+may,5
+jun,6
+jul,7
+aug,8
+sep,9
+oct,10
+nov,11
+dec,12
+{{< /high >}}
+
+We can create an ordered map from this data with the `fst map` command:
+
+{{< high sh >}}
+$ fst map months months.fst
+{{< /high >}}
+
+If our data was already sorted, then we could pass the `--sorted` flag:
+
+{{< high sh >}}
+$ fst map --sorted months months.fst
+{{< /high >}}
+
+The `--sorted` flag tells the `fst` command that it can build the FST in a
+streaming fashion, which is very fast. Without the `--sorted` flag, it has to
+sort the data first.
+
+If we want to visualize the underlying transducer, that's easy, assuming you
+have `graphviz` installed (which provides the `dot` command used below):
+
+{{< high sh >}}
+$ fst dot months.fst | dot -Tpng > months.png
+$ $IMAGE_VIEWER months.png
+{{< /high >}}
+
+And you should see something like this:
+
+![A map with all month abbreviations](/images/transducers/maps/months.png)
+
+Since the data set is small, searching it isn't so interesting, but let's try a
+few queries anyway. Listing all of them is easy with the `fst range` command:
+
+{{< high sh >}}
+$ fst range months.fst
+apr
+aug
+dec
+feb
+jan
+jul
+jun
+mar
+may
+nov
+oct
+sep
+{{< /high >}}
+
+Passing the `--outputs` flag shows the values too:
+
+{{< high sh >}}
+$ fst range months.fst
+apr,4
+aug,8
+dec,12
+...
+{{< /high >}}
+
+As the name of the command would suggest, we can also limit our results to a
+particular range:
+
+{{< high sh >}}
+$ fst range months.fst -s j -e o
+jan
+jul
+jun
+mar
+may
+nov
+{{< /high >}}
+
+Or even fuzzy search by looking for all months within an edit distance of `1`
+with `jun`:
+
+{{< high sh >}}
+$ fst fuzzy months.fst jun
+jan
+jul
+jun
+{{< /high >}}
+
+Most of these commands have a few additional options. You can check them by
+running `fst CMD --help`.
+
+### Experiments
+
+We're finally going to take a quick look at what it's like to use finite state
+machines as data structures on real data.
+
+#### The dictionary
+
+Where else would we start? Most users on Unix based systems already have a
+sizable collection of unique sorted keys at their fingertips: the dictionary.
+
+On my system, it is located at `/usr/share/dict/words` (which is actually a
+symlink to `/usr/share/dict/american-english`). It contains `119,095` unique
+words and is `1.1 MB` in size.
+
+Since it is already sorted, we can pass the `--sorted` flag to build a set:
+
+{{< high sh >}}
+$ fst set --sorted /usr/share/dict/words words.fst
+
+real    0m0.118s
+user    0m0.090s
+sys     0m0.007s
+maximum resident set size: 9.4 MB
+{{< /high >}}
+
+The resulting `words.fst` is now `324 KB`, which is `29.4%` of the original
+file size. By comparison, the same data gzipped (LZ77) is `302 KB` (`27.4%`) and the
+same data `xz` compressed (LZMA) is `232 KB` (`21.1%`). Default settings were
+used with the standard command line utilities `gzip` and `xz`.
+
+From here on out, I'll present these results in a more convenient tabular form.
+Once the data sets get big, I'll stop using `xz` because it takes too long.
+
+Times are presented as wall clock times, mostly because it is convenient, and
+the times will quickly become large enough that small variation will be in the
+noise.
+
+Here's the first table for the dictionary data set, which has `119,095` keys:
+
+Format | Time  | Max memory | Space
+-------|-------|------------|---------------
+plain  | -     | -          | 1100 KB
+fst    | 0.12s |  9.4 MB    |  324 KB (29.4%)
+gzip   | 0.15s |  1.8 MB    |  302 KB (27.4%)
+xz     | 0.35s | 30.1 MB    |  232 KB (21.1%)
+
+The purpose of comparing the FST data structure with other compression
+algorithms is to provide a baseline comparison. It's not *necessarily* a goal
+to be better or faster than either LZ77 or LZMA or anything else, but they are
+useful signposts. In particular, recall that the FST is actually a data
+structure, even in its compressed state. General compression schemes like LZ77
+or LZMA aren't well suited to easy random access or searching. Therefore, it
+isn't quite an apples-to-apples comparison.
+
+
+#### Gutenberg
+
+One possible use case for an FST based data structure is a term index in a
+fulltext search engine. Indeed,
+[Lucene uses FSTs for exactly this
+purpose](http://blog.mikemccandless.com/2010/12/using-finite-state-transducers-in.html).
+Therefore, it makes sense to test the FST with word like keys.
+
+I chose the
+[Gutenberg corpus](https://www.gutenberg.org/)
+for this test because it was easy to get, freely accessible and seemed like a
+decent enough representation of what might be in a fulltext database.
+
+Once I had all of Gutenberg downloaded on my hard drive, I concatenated all of
+the plain text, split on whitespace, sorted all of the tokens resulting from
+the split and removed duplicates. (I also stripped punctuation and applied
+ASCII lowercasing to each oken. Tokens with more exotic Unicode letters were
+tleft as-is.)
+
+The resulting data set contains `3,539,670` unique terms. Here's a table of
+comparisons between other compression formats:
+
+Format | Time   | Max memory | Space on disk
+-------|--------|------------|---------------
+plain  | -      | -          |  41 MB
+fst    |  2.04s | 21.8 MB    |  22 MB (53.7%)
+gzip   |  2.50s |  1.8 MB    |  13 MB (31.7%)
+xz     | 14.66s | 97.5 MB    |  10 MB (24.0%)
+
+In this case, we were able to beat the speed of `gzip`, which is pretty nice.
+Unfortunately, the FST was only `53.7%` the size of the original data, whereas
+in the previous example, the FST of the dictionary was `29.4%` of the original
+data. While both `gzip` and `xz` still perform pretty well, their compression
+ratio suffered as well. This might suggest that there is less redundancy to
+exploit in the data.
+
+We should also address what the time for creating the FST looks like if the
+tokens weren't sorted before hand.
+
+If the tokens from the data set hadn't already been sorted (i.e., we can't pass
+the `--sorted` flag to the `fst set` command), then the time it takes is a bit
+longer. For the Gutenberg data set, the time jumps to `5.58s` and uses `129 MB`
+of memory.
+
+It's worth pausing to say what actually happens when the `--sorted` flag is
+*not* passed. In particular, the FST data structure must be built by inserting
+keys in lexicographic order. This implies we must sort the data first. A
+problem with sorting is that the simplest solution is to load all of the keys
+into memory and then sort. However, as we will see with future data sets, that
+isn't always possible.
+
+Instead, the `fst` command will batch the input into a bunch of chunks and sort
+them individually. Once a chunk is sorted, it is written to disk in `/tmp` as
+its own FST. Once all chunks have been sorted and turned into FSTs, we union
+all of the FSTs together into one.
+
+The "batching" part of this process contributed to the `129 MB` use of memory.
+In particular, the default batch size is `100,000` keys, and the `fst` command
+will sort multiple batches in parallel. Dropping the batch size will reduce the
+amount of memory required by the process.
+
+However, that still isn't doesn't explain the total memory usage! In fact, part
+of the "resident set size" reported by the `time` command includes data read
+from memory maps that is resident in memory. Since all of the intermediate FSTs
+created from each batch must be read entirely in order to merge them, it
+follows that the OS had to read all data from each FST into memory. Notably,
+this data isn't actually part of the heap space in our process. This means that
+if your system needs it, the OS can actually swap out unused memory that was
+initially claimed by the memory map without necessarily impacting the
+performance of construction (since once a part of the FST is read and
+processed, it is no longer needed).
+
+In short, memory usages when using FSTs and memory maps can be tricky to
+analyze.
+
+#### Wikipedia titles
+
+Let's say you have a huge collection of articles and you want to build a
+*really* fast auto-complete service for the titles of each of those articles.
+Why not use an FST to store the titles? Lookups will be very fast.
+(Elasticsearch [uses FSTs for its auto-completion
+suggester](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-suggesters-completion.html).)
+
+For this use case, I looked no further than Wikipedia. It has a huge collection
+of articles and serves as a nice representative example for what real data
+might look like.
+
+It is actually pretty easy to download
+[all of Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Database_download).
+Once the XML of every article was on my disk drive, I wrote a quick program to
+extract the title from each article into a separate file. I then sorted the
+titles. There are a total of `15,777,626` article titles that occupy `384 MB`
+on disk.
+
+Let's take a look at the comparison table for this data set.
+
+Format | Time    | Max memory | Space on disk
+-------|---------|------------|---------------
+plain  | -       | -          |  384 MB
+fst    |  18.31s | 34.1 MB    |  157 MB (40.9%)
+gzip   |  13.08s |  1.8 MB    |   91 MB (23.7%)
+xz     | 140.53s | 97.6 MB    |   68 MB (17.7%)
+
+Our compression ratio improved over the Gutenberg data set, but we got a little
+slower than `gzip` in the process.
+
+### DOI urls
+
+At this point, I was struggling to find real data sets that were huge and
+freely accessible. Certainly, I could generate a bunch of random keys---or
+attempt to approximate what real data would look like---but that felt intensely
+unsatisfying.
+
+I then stumbled upon the
+[Internet Archies DOI dataset](https://archive.org/details/doi-urls),
+containing almost `50,000,000` URLs to journal articles.
+(A [DOI is a Digital Object
+Identifier](https://en.wikipedia.org/wiki/Digital_object_identifier).)
+
+The DOI data set contains `49,118,091` URLs and occupies `2800 MB` on disk.
+Let's take a look at the comparison table.
+
+Format | Time    | Max memory | Space on disk
+-------|---------|------------|---------------
+plain  | -       | -          | 2800 MB
+fst    |  27.40s | 17.6 MB    |  113 MB (4.0%)
+gzip   |  40.39s |  1.8 MB    |  176 MB (6.3%)
+xz     | 716.60s | 97.6 MB    |   66 MB (2.6%)
+
+This is pretty cool. On this data set, FST construction is faster than `gzip`
+*and* it gets a better compression ratio. This particular data is somewhat of a
+special case; however, since there is a ridiculous amount of redundant
+structure in the keys. Since these are all URLs to journal articles, there are
+long sequences of URLs that look mostly the same but with a slightly different
+suffix. This is nearly perfectly ideal for an FST that compresses prefixes. (To
+be fair, a trie would do nice here as well.)
+
+### Common crawl
+
+I couldn't stop with the DOI data set. `50,000,000` keys is big, and
+compressing them in merely `27` seconds is a nice result, but I don't see it as
+a representative example of real work loads, so it was unfortunate that the
+biggest data set I had to try with FSTs also happened to be a near best case
+scenario.
+
+I
+[posted my conunudrum on
+/r/rust](https://www.reddit.com/r/rust/comments/3ie7gp/whats_everyone_working_on_this_week/cufp1ma),
+and ta-da,
+[erickt](http://erickt.github.io/)
+re-taught me about the
+[Common Crawl](https://commoncrawl.org/),
+which I had completely forgotten about.
+
+The Common Crawl is *huge*. Like, petabytes huge. I'm ambitious, but not quite
+*that* ambitious. Thankfully, the good folks over at the Common Crawl publish
+their data set as a monthly digest. I went for the
+[July 2015
+crawl](http://blog.commoncrawl.org/2015/08/july-2015-crawl-archive-available/),
+which is over 145 TB.
+
+That's still a bit too big. Downloading all of that data and processing it
+would take a long time. Fortunately, the Common Crawl folks come through again:
+they make an index of all "WAT" files available. "WAT" files contain meta data
+about each page crawled, and don't include the actual raw document. Among that
+meta data is a URL, which is exactly what I'm after.
+
+Despite narrowing the scope, downloading this much data over a cable modem with
+a 2 MB/s connection won't be fun. So I spun up a `c4.8xlarge` and started
+downloading all URLs from the July 2015 crawl archive with this shell script:
+
+{{< high sh >}}
+#!/bin/bash
+
+set -e
+
+url="https://aws-publicdatasets.s3.amazonaws.com/$1"
+dir="$(dirname "$1")"
+name="$(basename "$1")"
+fpath="$dir/${name}.urls.gz"
+
+mkdir -p "$dir"
+if [ ! -r "$fpath" ]; then
+  curl -s --retry 5 "$url" \
+    | zcat \
+    | grep -i 'WARC-TARGET-URI:' \
+    | awk '{print $2}' \
+    | gzip > "$fpath"
+fi
+{{< /high >}}
+
+If saved as `dl-wat`, one could then run it like so:
+
+{{< high sh >}}
+$ zcat wat.paths.gz | xargs -P32 -n1 dl-wat
+{{< /high >}}
+
+And bam, we have 32 concurrent processes extracting all of the URLs from the
+crawl's archive. Once that's done, all we have to do is `cat` the resulting URL
+files (of which, there will be one for each `wat` file).
+
+The total number of URLs I got was `7,563,934,593` and occupies `612 GB`
+on disk uncompressed. When sorted and deduped, the total number of URLs is
+`1,649,195,774` and occupies `134 GB` on disk.
+
+We can now start building our FST. Since sorting the URLs would
+take a very long time, we'll just let the `fst` command do it for us. Namely,
+the comparison table below shows the time it took for initial construction from
+unsorted data, and also the time it took to run the process again on a sorted
+list of URLs.
+
+Format         | Time        | Max memory | Space on disk
+---------------|-------------|------------|----------------
+plain          | -           | -          |  134 MB
+fst (sorted)   |  82 minutes |   56 MB    |   27 MB (20.1%)
+fst (unsorted) | 240 minutes |    ?       |    same
+gzip           |  36 minutes |  1.8 MB    |   15 GB (11.2%)
+xz             | -           | -          | -
+
+My instincts about the DOI urls being an "ideal case" seem to be proven right
+by these results. Namely, we're back to a more realistic compression ratio of
+`20.1%`, although we are still beaten soundly by `gzip`.
+
+There are no numbers for `xz` because it would likely take a very long time to
+run.
+
+Another point worth mentioning is the time it took to build this FST. Namely,
+it contains 32 times as many keys as the DOI data set, but it took 182 times as
+long to run. I actually don't have a complete answer for that yet. One of my
+estimates is that the cache being used to reuse states might degrade in
+performance if it is full. Another estimate is that since the DOI data set had
+so much redundant structure, the keys could be processed more quickly. Namely,
+most keys probably resulted in a very small number of states being compiled.
+Unfortunately, this will be a tough nut to crack because the FST for the Common
+Crawl data set is so large, so it is hard to inspect with traditional tools.
+
+I don't have a measurement for the maximum memory used by the unsorted
+construction process, but my recollection from watching `htop` was that the
+*shared* memory usage of the process got quite high (tens of GB). My estimation
+is that this was a reflection of memory mapped in from files while the
+temporary FSTs were being merged. Indeed, I could watch its shared memory usage
+go down significantly when I ran a command like this:
+
+{{< high sh >}}
+$ cat lots of huge files > /dev/null
+{{< /high >}}
+
+Namely, by reading a lot of big files with `cat`, I forced the operating system
+to allocate some of its page cache to file IO unrelated to the `fst` process.
+Since so much of it had been dedicated to the `fst` process, it started taking
+some away from it, and shared memory usage started dropping.
+
+Indeed, if you build your own large FST and then run the following command:
+
+{{< high sh >}}
+$ fst range large.fst | wc -l
+{{< /high >}}
+
+and watch `htop` while it's running, you should see both shared and resident
+memory usage climb in unison. On the DOI data set for example, resident
+memory usage is consistently `3 MB` greater than shared memory usage, but both
+grow until about `113 MB` (the size of the DOI FST), at which point, all keys
+had been enumerated.
+
+Finally, let's take a quick peek at what it's like to query this huge FST.
+For example, perhaps we want to find all Wikipedia URLs that were indexed. We
+might elect to do a regular expression search:
+
+{{< high sh >}}
+$ fst grep /data/common-crawl/201507/urls.fst 'http://en.wikipedia.org/.*' | wc -l
+97054
+{{< /high >}}
+
+<!-- ******* -->
+
+When I first ran this command, it took `2` whole seconds! What's up with that?
+Well, if I run the same command again, it finishes in approximately `0.1`
+seconds. That's a big difference. Indeed, it is because the FST was not in
+memory, and it took time for the OS to read the data we needed to access into
+memory. (Specifically, this is on a disk with spinning rust, so we're really
+paying for physical seek time and file I/O here. Recall that the format of an
+FST on disk militates toward random access.)
+
+Indeed, the output of `time -v` will tell us that there were `164` page faults
+which required the OS to go out and do file I/O to resolve. Upon subsequent
+calls, this number dropped to `0` because those parts of the file were still in
+memory.
+
+If the Internet is any judge, we've now constructed the
+[world's largest
+FST](http://aaron.blog.archive.org/2013/05/29/worlds-biggest-fst/) (with
+respect to the number of keys). Hooray!
+
+## Lessons and trade offs
+
+In my mind's eye, I've always experienced Computer Science as the *study of
+computational trade offs*. Representing ordered sets and maps with finite state
+machines is a shining beacon of that study. Given that we've spent most of this
+article talking about the benefits of FSTs, we will now dedicate a small
+section to the downsides of FSTs.
+
+### Not a general purpose data structure
+
+### More useful on 64 bit systems
+
+### Requires fast random access
+
+
 <!--
 Initial number of urls: 7,563,934,593
 Number of unique urls: 1,649,195,774
@@ -1797,33 +2297,4 @@ Three hours to join all 544 FST's into one.
 
 1 hour 22 minutes to create FST from sorted list.
   Max heap size: 56MB
--->
-
-<!--
-{{< code-rust "test" >}}
-use fst::{IntoStreamer, Streamer, Levenshtein, Set};
-
-// A convenient way to create sets in memory.
-let keys = vec!["fa", "fo", "fob", "focus", "foo", "food", "foul"];
-let set = try!(Set::from_iter(keys));
-
-// Build our fuzzy query.
-let lev = try!(Levenshtein::new("foo", 1));
-
-// Apply our fuzzy query to the set we built.
-let stream = set.search(lev).into_stream();
-let keys = try!(stream.into_strs());
-assert_eq!(keys, vec![
-    "fo",   // 1 deletion
-    "fob",  // 1 substitution
-    "foo",  // 0 insertions/deletions/substitutions
-    "food", // 1 insertion
-]);
-{{< /code-rust >}}
--->
-
-<!--
-{{< high sh >}}
-$ git clone git://github.com/BurntSushi/blog
-{{< /high >}}
 -->

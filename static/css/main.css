@@ -255,6 +255,19 @@ table.highlighttable td .linenodiv pre {
   padding-left: 10px;
 }
 
+table {
+  font-size: 1rem;
+  border-right: 1px solid #000;
+  border-bottom: 1px solid #000;
+  margin-bottom: 15px;
+}
+
+  table th, table td {
+    border-top: 1px solid #000;
+    border-left: 1px solid #000;
+    padding: 6px;
+  }
+
 .highlight .p {
   font-size: 1.125rem;
   line-height: 1;
