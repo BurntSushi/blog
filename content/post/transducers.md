@@ -2207,8 +2207,8 @@ list of URLs.
 
 Format         | Time        | Max memory | Space on disk
 ---------------|-------------|------------|----------------
-plain          | -           | -          |  134 MB
-fst (sorted)   |  82 minutes |   56 MB    |   27 MB (20.1%)
+plain          | -           | -          |  134 GB
+fst (sorted)   |  82 minutes |   56 MB    |   27 GB (20.1%)
 fst (unsorted) | 240 minutes |    ?       |    same
 gzip           |  36 minutes |  1.8 MB    |   15 GB (11.2%)
 xz             | -           | -          | -
