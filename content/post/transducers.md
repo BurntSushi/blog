@@ -3,7 +3,6 @@ date = "2015-11-02T19:09:00-04:00"
 title = "Index 1,600,000,000 Keys with Automata and Rust"
 author = "Andrew Gallant"
 url = "transducers"
-draft = true
 
 [blackfriday]
 plainIdAnchors = true
