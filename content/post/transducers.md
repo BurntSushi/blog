@@ -508,8 +508,8 @@ applies equally well to them. The only difference between a trie and the FSAs
 shown in this article is that a trie permits the sharing of *prefixes* between
 keys while an FSA permits the sharing of both prefixes and suffixes.
 
-Consider a set with the keys `mon`, `tues` and `wed`. Here is the corresponding
-FSA that benefits from sharing both prefixes and suffixes:
+Consider a set with the keys `mon`, `tues` and `thurs`. Here is the
+corresponding FSA that benefits from sharing both prefixes and suffixes:
 
 ![Set of first three days of week, FSA](/images/transducers/sets/days3.png)
 
