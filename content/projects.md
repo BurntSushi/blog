@@ -86,6 +86,13 @@ simultaneously open file descriptors.
 Golang style multi-producer/multi-receiver channels. Includes a
 `select_chan!` macro with semantics similar to Go's `select` statement.
 
+#### [fst](https://github.com/BurntSushi/fst)
+
+Provides ordered sets and maps represented by finite state machines. This
+provides a way to compress lots of keys while retaining the ability to search
+them. I wrote a blog post describing them in detail:
+[Index 1,600,000,000 Keys with Automata and Rust](/transducers/).
+
 ### Go projects
 
 While Rust and Go are two very different languages, I enjoy using both of them.
