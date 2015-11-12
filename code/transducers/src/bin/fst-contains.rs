@@ -16,7 +16,7 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
           // Look for a transition in this node for this byte.
           match node.find_input(*b) {
               // If one cannot be found, we can conclude that the key is not
-              // in this FST.
+              // in this FST and quit early.
               None => return false,
               // Otherwise, we set the current node to the node that the found
               // transition points to. In other words, we "advance" the finite

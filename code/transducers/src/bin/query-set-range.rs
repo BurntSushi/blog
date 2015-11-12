@@ -25,7 +25,7 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   let got_keys = try!(stream.into_strs());
   
   // Check that we got the right keys.
-  assert_eq!(keys[1..6].to_vec(), got_keys);
+  assert_eq!(got_keys, &keys[1..6]);
     Ok(())
 }
 

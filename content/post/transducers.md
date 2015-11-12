@@ -1,6 +1,6 @@
 +++
 date = "2015-11-02T19:09:00-04:00"
-title = "Index 1,000,000,000 Keys with Automata and Rust"
+title = "Index 1,600,000,000 Keys with Automata and Rust"
 author = "Andrew Gallant"
 url = "transducers"
 draft = true
@@ -15,11 +15,18 @@ represent ordered sets or maps of strings that can be searched very quickly.
 
 In this article, I will teach you about finite state machines as a *data
 structure* for representing ordered sets and maps. This includes introducing
-an implementation [written in Rust](https://github.com/BurntSushi/fst). I will
-also show you how to build them using a simple command line tool. Finally, I
-will discuss a few experiments culminating in indexing over 1,000,000,000 URLs
-(134 GB) from the
+an implementation written in Rust called the
+[`fst` crate](https://github.com/BurntSushi/fst).
+It comes with
+[complete API documentation](http://burntsushi.net/rustdoc/fst/).
+I will also show you how to build them using a simple command line tool.
+Finally, I will discuss a few experiments culminating in indexing over
+1,600,000,000 URLs (134 GB) from the
 [July 2015 Common Crawl Archive](http://blog.commoncrawl.org/2015/08/july-2015-crawl-archive-available/).
+
+The technique presented in this article is also how
+[Lucene represents a part of its inverted
+index](http://blog.mikemccandless.com/2010/12/using-finite-state-transducers-in.html).
 
 Along the way, we will talk about memory maps, automaton intersection with
 regular expressions, fuzzy searching with Levenshtein distance and streaming
@@ -33,7 +40,7 @@ structures. No experience with automata theory or Rust is required.
 ## Teaser
 
 As a teaser to show where we're headed, let's take a quick look at an example.
-We won't look at 1,000,000,000 strings quite yet. Instead, consider ~16,000,000
+We won't look at 1,600,000,000 strings quite yet. Instead, consider ~16,000,000
 Wikipedia article titles (`384 MB`). Here's how to index them:
 
 {{< high sh >}}
@@ -84,6 +91,10 @@ Roger Simpson
 real    0m0.094s
 {{< /high >}}
 
+This article is quite long, so if you only came for the fan fare, then you may
+skip straight to the
+[section where we index 1,600,000,000 keys](#common-crawl).
+
 ## Table of Contents
 
 This article is pretty long, so I've put together a table of contents in case
@@ -92,7 +103,7 @@ you want to skip around.
 The first section discusses finite state machines and their use as data
 structures in the abstract. This section is meant to give you a mental model
 with which to reason about the data structure. There is no code in this
-seciton.
+section.
 
 The second section takes the abstraction developed in the first section and
 demonstrates it with an implementation. This section is mostly intended to
@@ -133,10 +144,12 @@ the performance of finite state machines as a data structure.
         * [Wikipedia titles](#wikipedia-titles)
         * [DOI urls](#doi-urls)
         * [Common crawl](#common-crawl)
+        * [Query performance](#query-performance)
 * [Lessons and trade offs](#lessons-and-trade-offs)
     * [Not a general purpose data structure](#not-a-general-purpose-data-structure)
     * [More useful on 64 bit systems](#more-useful-on-64-bit-systems)
     * [Requires fast random access](#requires-fast-random-access)
+* [Conclusion](#conclusion)
 
 ## Finite state machines as data structures
 
@@ -249,7 +262,7 @@ whether a key is in the set or not is bounded by the number of characters in
 the key! That is, the time it takes to lookup a key is not related at all to
 the size of the set.
 
-Let's add another key to set to see what it looks like. The following FSA
+Let's add another key to the set to see what it looks like. The following FSA
 represents an ordered set with keys "jul" and "mar":
 
 ![A set with two elements, FSA](/images/transducers/sets/set2.png)
@@ -260,7 +273,7 @@ follow the `m` transition.
 
 There's one other important thing to notice here: the state `3` is *shared*
 between the `jul` and `mar` keys. Namely, the state `3` has two transitions
-entering it: `y` and `h`. This sharing of states between keys is really
+entering it: `l` and `r`. This sharing of states between keys is really
 important, because it enables us to store more information in a smaller space.
 
 Let's see what happens when we add `jun` to our set, which shares a common
@@ -433,12 +446,12 @@ Indeed, the key property that enables this sharing is that each key in the map
 corresponds to a *unique path* through the machine. Therefore, there will
 always be some combination of transitions followed for each key that is unique
 to that particular key. All we have to do is figure out how to place the
-outputs along the transitions. (We will talk briefly about how to do this in
-the next section.)
+outputs along the transitions. (We will see how to do this in the next
+section.)
 
-This sharing of outputs works for keys with both common prefixes and suffixes too. Consider the
-keys `tuesday` and `thursday`, associated with the values `3` and `5`,
-respectively (for day of the week).
+This sharing of outputs works for keys with both common prefixes and suffixes
+too. Consider the keys `tuesday` and `thursday`, associated with the values `3`
+and `5`, respectively (for day of the week).
 
 ![A map with two elements (suffixes),
 FST](/images/transducers/maps/map2-suffixes.png)
@@ -692,7 +705,7 @@ Insertion of the `tye` key allowed us to freeze the `es` part of the `tues`
 key. In particular, as with FSA construction, we identified equivalent states
 so that `thurs` and `tues` could share states in the FST.
 
-What was different here for FST construction is that the output associated with
+What is different here for FST construction is that the output associated with
 the `4->9` transition (which was just added for the `tye` key) has an output of
 `96`. It chose `96` because the transition prior to it, `0->4`, has an output
 of `3`. Since the common prefix of `99` and `3` is `3`, the output of `0->4` is
@@ -708,7 +721,7 @@ of the `tye` key is connected to the final state shared by all other keys.
 
 #### Construction in practice
 
-Actually writing the code to implement the pictorally described algorithms
+Actually writing the code to implement the pictorially described algorithms
 above is a bit beyond the scope of this article. (A fast implementation of it
 is of course freely available in my [`fst`](https://github.com/BurntSushi/fst)
 library.) However, there are some important challenges worth discussing.
@@ -751,8 +764,8 @@ The algorithms presented above are not my own. (I did, to the best of my
 knowledge, come up with the LRU cache idea. But that's it!)
 
 I got the algorithm for FSA construction from
-[Incremental construction of minimal acyclic finite-state
-automata](http://www.mitpressjournals.org/doi/pdfplus/10.1162/089120100561601).
+[Incremental Construction of Minimal Acyclic Finite State
+Automata](http://www.mitpressjournals.org/doi/pdfplus/10.1162/089120100561601).
 In particular, section 3 does a reasonably good job of explaining the
 particulars, but the paper overall is a good read.
 
@@ -782,7 +795,7 @@ of research. Here are two papers that helped me the most:
   Automata](http://www.cs.put.poznan.pl/dweiss/site/publications/download/fsacomp.pdf)
 
 For an excellent but very long and in depth overview of the field, [Jan
-Daciuk's disseration](http://www.pg.gda.pl/~jandac/thesis.ps.gz) (gzipped
+Daciuk's dissertation](http://www.pg.gda.pl/~jandac/thesis.ps.gz) (gzipped
 PostScript warning) is excellent.
 
 For a short and sweet experimentally motivated overview of construction
@@ -837,8 +850,9 @@ handy, which may act as a nice supplement to the material in this section.
 Most data structures in Rust are mutable, which means queries, insertions and
 deletions are all bundled up neatly in a single API. Data structures built on
 the FSTs described in this blog post are unfortunately a different animal,
-because once they are built, they can no longer be modified. This makes a
-division between "build a set" and "query a set" a bit more justified.
+because once they are built, they can no longer be modified. Therefore, there
+is a division in the API the distinguishes between *building* an FST and
+*querying* an FST.
 
 This division is reflected in the types exposed by the `fst` library. Among
 them are `Set` and `SetBuilder`, where the former is for querying and the
@@ -898,7 +912,7 @@ At a high level, this code is:
 1. Creating a file and wrapping it in a buffer for fast writing.
 2. Create a `SetBuilder` that writes to the file we just created.
 3. Inserts keys into the set using the `SetBuilder::insert` method.
-4. Closes and set and flushes the data structure to disk.
+4. Closes the set and flushes the data structure to disk.
 
 Sometimes though, we don't need or want to stream the set to a file on disk.
 Sometimes we just want to build it in memory and use it. That's possible too!
@@ -966,9 +980,10 @@ and
 
 In the examples above, we had to create a builder, insert keys one by one and
 then finally call `finish` or `into_inner` before we could declare the process
-done. This is often convenient in practice (for example, iterating over lines
-in a file), but it is not so convenient for presenting concise examples in a
-blog post. Therefore, we will use a small convenience.
+of building a set or a map done. This is often convenient in practice (for
+example, iterating over lines in a file), but it is not so convenient for
+presenting concise examples in a blog post. Therefore, we will use a small
+convenience.
 
 The following code builds a set in memory:
 
@@ -982,7 +997,8 @@ This will achieve the same result as before. The only difference is that we
 are allocating a dynamically growable vector of elements before constructing
 the set, which is typically not advisable on large data.
 
-The same trick works for maps:
+The same trick works for maps, which takes a sequence of tuples (keys and
+values) instead of a sequence of byte strings (keys):
 
 {{< code-rust "build-map-shortcut" >}}
 use fst::Map;
@@ -1105,7 +1121,7 @@ of the finite state machine. Therefore, the keys are *constructed during the
 process of iteration*.
 
 OK, back to querying. In addition to iterating over all the keys, we can also
-iterate over a subset of the keys efficienty with *range queries*. Here's an
+iterate over a subset of the keys efficiently with *range queries*. Here's an
 example that builds on the previous one.
 
 {{< code-rust "query-set-range" >}}
@@ -1130,7 +1146,7 @@ let stream = range.into_stream();
 let got_keys = try!(stream.into_strs());
 
 // Check that we got the right keys.
-assert_eq!(keys[1..6].to_vec(), got_keys);
+assert_eq!(got_keys, &keys[1..6]);
 {{< /code-rust >}}
 
 The key line in the above example was this:
@@ -1255,7 +1271,7 @@ FST in memory militates toward random access of the data. Namely, looking up a
 key may jump around to different regions of the FST that are not close to each
 other at all. This means that reading an FST from disk through a memory map can
 be costly because random access I/O is slow. This is particularly true when
-using a non-solid state disk since random access will require a lot of phyiscal
+using a non-solid state disk since random access will require a lot of physical
 seeking. If you find yourself in this situation and the operating system's page
 cache can't compensate, then you may need to pay the upfront cost and load the
 entire FST into memory. Note that this isn't quite a death sentence, since the
@@ -1270,7 +1286,7 @@ searching*. There are many different types of fuzzy searching, but we will only
 cover one here: fuzzy search by Levenshtein or "edit" distance.
 
 Levenshtein distance is a way to compare two strings. Namely, given strings `A`
-and `B`, the edit distance of `A` and `B` is the number of character
+and `B`, the Levenshtein distance of `A` and `B` is the number of character
 insertions, deletions and substitutions one must perform to transform `A` into
 `B`. Here are some simple examples:
 
@@ -1282,18 +1298,18 @@ insertions, deletions and substitutions one must perform to transform `A` into
 
 There are a
 [variety of ways](https://en.wikipedia.org/wiki/Levenshtein_distance#Computing_Levenshtein_distance)
-to implement an algorithm that computes the edit distance between two strings.
+to implement an algorithm that computes the Levenshtein distance between two strings.
 To a first approximation, the best one can do is `O(mn)` time, where `m` and
 `n` are the lengths of the strings being compared.
 
 For our purposes, the question we'd like to answer is: does this key match any
-of the keys in the set up to an edit distance of `n`?
+of the keys in the set up to an Levenshtein distance of `n`?
 
-Certainly, we could implement an algorithm to compute edit distance between two
-strings, iterate over the keys in one of our FST based ordered sets, and run
-the algorithm for each key. If the distance between the query and the key is
-`<= n`, then we emit it as a match. Otherwise, we skip the key and move on to
-the next.
+Certainly, we could implement an algorithm to compute Levenshtein distance
+between two strings, iterate over the keys in one of our FST based ordered
+sets, and run the algorithm for each key. If the distance between the query and
+the key is `<= n`, then we emit it as a match. Otherwise, we skip the key and
+move on to the next.
 
 The problem with this approach is that it is incredibly slow. It requires
 running an effectively quadratic algorithm over every key in the set. Not good.
@@ -1361,16 +1377,17 @@ A really important detail that we glossed over is how the Levenshtein distance
 is actually defined. Here is what I said, emphasis added:
 
 > Levenshtein distance is a way to compare two strings. Namely, given strings
-`A` and `B`, the edit distance of `A` and `B` is the number of ***character***
-insertions, deletions and substitutions one must perform to transform `A` into
-`B`.
+`A` and `B`, the Levenshtein distance of `A` and `B` is the number of
+***character*** insertions, deletions and substitutions one must perform to
+transform `A` into `B`.
 
 What exactly is a "character" and how do our FST based ordered sets and maps
 handle it? There is no one true canonical definition of what a character is,
 and therefore, it was a poor choice of words for technical minds. A better
 word, which reflects the actual implementation, is the number of ***Unicode
-codepoints***. That is, the edit distance is the number of Unicode codepoint
-insertions, deletions or substitutions to transform one key into another.
+codepoints***. That is, the Levenshtein distance is the number of Unicode
+codepoint insertions, deletions or substitutions to transform one key into
+another.
 
 Unfortunately, there isn't enough space to go over Unicode here, but
 [Introduction to
@@ -1623,7 +1640,7 @@ also include the values associated with each key. In particular, for a union
 operation, each key emitted in the stream may have occurred in more than one of
 the maps given. I will defer to
 [`fst`'s API documentation for a map
-union](file:///home/andrew/rust/fst/target/doc/fst/map/struct.OpBuilder.html#method.union),
+union](http://burntsushi.net/rustdoc/fst/map/struct.OpBuilder.html#method.union),
 which contains an example.
 
 ### Raw transducers
@@ -1689,8 +1706,8 @@ available to you:
 * `node(addr)` returns the state or "node" at the given address.
 
 Nodes provide the ability to traverse all of its transitions and ask whether it
-is a final state or not. For example, consider tracing the path of the key
-`baz` through the FST:
+is a final state or not. For example, consider starting a path to trace the key
+`baz` through the machine:
 
 {{< code-rust "fst-node" >}}
 use fst::raw::{Builder, Fst};
@@ -1705,8 +1722,8 @@ let fst = try!(Fst::from_bytes(fst_bytes));
 // Get the root node of this FST.
 let root = fst.root();
 
-// Print the transitions out of the root node.
-// outputs "b" followed by "f"
+// Print the transitions out of the root node in lexicographic order.
+// Outputs "b" followed by "f."
 for transition in root.transitions() {
     println!("{}", transition.inp as char);
 }
@@ -1773,8 +1790,8 @@ right into experiments with real data.
 ### How to get it
 
 Unless you're dying to play with the tool, it's not necessary for you to
-download it. Namely, in this section I'll show the commands I'm running along
-with their outputs when possible.
+download it. Namely, in this section I'll usually show the commands I'm running
+along with their outputs when possible.
 
 Currently, the only way to get the command is to compile it from source. To do
 that, you will first need to [install Rust and
@@ -1796,17 +1813,17 @@ Once compilation is done, the `fst` binary will be located at
 
 ### Brief introduction
 
-The `fst` command line tool has several commands. Some of them are serve a
-purely diagnostic role (i.e., "I want to look at a particular state in the
-underlying transducer") while others are more utilitarian. In this article,
-we'll focus on the latter.
+The `fst` command line tool has several commands. Some of them serve a purely
+diagnostic role (i.e., "I want to look at a particular state in the underlying
+transducer") while others are more utilitarian. In this article, we'll focus on
+the latter.
 
 Here are the commands:
 
 * `dot` - Outputs an FST to the "dot" format, which can be used by GraphViz to
   render a visual display of the image. I used this utility to create many of
   the images in this blog post.
-* `fuzzy` - Run a fuzzy query based on edit distance against an FST.
+* `fuzzy` - Run a fuzzy query based on Levenshtein distance against an FST.
 * `grep` - Run a regular expression query against an FST.
 * `range` - Run a range query against an FST.
 * `set` - Create an ordered set represented by an FST. Its input is simple a
@@ -1907,8 +1924,8 @@ may
 nov
 {{< /high >}}
 
-Or even fuzzy search by looking for all months within an edit distance of `1`
-with `jun`:
+Or even fuzzy search by looking for all months within an Levenshtein distance
+of `1` with `jun`:
 
 {{< high sh >}}
 $ fst fuzzy months.fst jun
@@ -1971,8 +1988,10 @@ algorithms is to provide a baseline comparison. It's not *necessarily* a goal
 to be better or faster than either LZ77 or LZMA or anything else, but they are
 useful signposts. In particular, recall that the FST is actually a data
 structure, even in its compressed state. General compression schemes like LZ77
-or LZMA aren't well suited to easy random access or searching. Therefore, it
-isn't quite an apples-to-apples comparison.
+or LZMA aren't well suited to easy random access or searching. Similarly,
+neither the LZ77 or LZMA algorithms require that the input be sorted before
+compression can work, which *is* a requirement of FSTs. Therefore, it isn't
+quite an apples-to-apples comparison.
 
 
 #### Gutenberg
@@ -1991,8 +2010,8 @@ decent enough representation of what might be in a fulltext database.
 Once I had all of Gutenberg downloaded on my hard drive, I concatenated all of
 the plain text, split on whitespace, sorted all of the tokens resulting from
 the split and removed duplicates. (I also stripped punctuation and applied
-ASCII lowercasing to each oken. Tokens with more exotic Unicode letters were
-tleft as-is.)
+ASCII lowercasing to each token. Tokens with more exotic Unicode letters were
+left as-is.)
 
 The resulting data set contains `3,539,670` unique terms. Here's a table of
 comparisons between other compression formats:
@@ -2081,7 +2100,7 @@ xz     | 140.53s | 97.6 MB    |   68 MB (17.7%)
 Our compression ratio improved over the Gutenberg data set, but we got a little
 slower than `gzip` in the process.
 
-### DOI urls
+#### DOI urls
 
 At this point, I was struggling to find real data sets that were huge and
 freely accessible. Certainly, I could generate a bunch of random keys---or
@@ -2089,7 +2108,7 @@ attempt to approximate what real data would look like---but that felt intensely
 unsatisfying.
 
 I then stumbled upon the
-[Internet Archies DOI dataset](https://archive.org/details/doi-urls),
+[Internet Archive's DOI dataset](https://archive.org/details/doi-urls),
 containing almost `50,000,000` URLs to journal articles.
 (A [DOI is a Digital Object
 Identifier](https://en.wikipedia.org/wiki/Digital_object_identifier).)
@@ -2109,10 +2128,10 @@ This is pretty cool. On this data set, FST construction is faster than `gzip`
 special case; however, since there is a ridiculous amount of redundant
 structure in the keys. Since these are all URLs to journal articles, there are
 long sequences of URLs that look mostly the same but with a slightly different
-suffix. This is nearly perfectly ideal for an FST that compresses prefixes. (To
-be fair, a trie would do nice here as well.)
+suffix. This is nearly perfectly ideal for an FST since it compresses prefixes.
+(To be fair, a trie would do nicely here as well.)
 
-### Common crawl
+#### Common crawl
 
 I couldn't stop with the DOI data set. `50,000,000` keys is big, and
 compressing them in merely `27` seconds is a nice result, but I don't see it as
@@ -2178,7 +2197,7 @@ crawl's archive. Once that's done, all we have to do is `cat` the resulting URL
 files (of which, there will be one for each `wat` file).
 
 The total number of URLs I got was `7,563,934,593` and occupies `612 GB`
-on disk uncompressed. When sorted and deduped, the total number of URLs is
+on disk uncompressed. When sorted and deduplicated, the total number of URLs is
 `1,649,195,774` and occupies `134 GB` on disk.
 
 We can now start building our FST. Since sorting the URLs would
@@ -2225,8 +2244,9 @@ $ cat lots of huge files > /dev/null
 
 Namely, by reading a lot of big files with `cat`, I forced the operating system
 to allocate some of its page cache to file IO unrelated to the `fst` process.
-Since so much of it had been dedicated to the `fst` process, it started taking
-some away from it, and shared memory usage started dropping.
+Since so much of it had been dedicated to the `fst` process, the OS started
+taking some away from the `fst` process, and shared memory usage on the `fst`
+process started dropping.
 
 Indeed, if you build your own large FST and then run the following command:
 
@@ -2264,10 +2284,91 @@ which required the OS to go out and do file I/O to resolve. Upon subsequent
 calls, this number dropped to `0` because those parts of the file were still in
 memory.
 
+For a quick comparison, I copied the Common Crawl FST to an SSD, cleared my
+page cache and re-ran the same `grep` query. I confirmed that there were
+approximately `164` page faults. The total runtime was a mere `0.16` seconds
+(compared to `2` seconds for a spinning disk with a cold page cache).
+Re-running it again brings it back down to `0.1` seconds. So using an SSD
+*almost* makes the page cache irrelevant for fast querying.
+
 If the Internet is any judge, we've now constructed the
 [world's largest
 FST](http://aaron.blog.archive.org/2013/05/29/worlds-biggest-fst/) (with
 respect to the number of keys). Hooray!
+
+#### Query performance
+
+A serious omission in the previous experiments are benchmarks measuring query
+performance. This omission is intentional because I haven't yet come up with a
+good benchmark for it. A key part of benchmarking query performance is
+simulating real queries under load. In particular, it should ideally include
+querying multiple FSTs simultaneously and what happens when parts of the FSTs
+are evicted from the operating system's page cache.
+
+With that said, it is still worth getting an idea of what query performance is
+like. For this, I have a micro benchmark that compares set membership on two
+different data sets between `fst::Set`, `std::collections::HashSet` and
+`std::collections::BTreeSet`. `fst::Set` is the set data structure discussed in
+this article, represented by an FST. `HashSet` is a set implemented with a hash
+table. `BTreeSet` is an ordered set implemented with a btree.
+
+The first data set is a random sample of `100,000` words from the Gutenberg
+data set. Our benchmark looks up a random word from the data set (so it only
+benchmarks set membership where the answer is always "yes").
+
+{{< high text >}}
+fst_contains        575 ns/iter
+btree_contains      134 ns/iter
+hash_fnv_contains    63 ns/iter
+hash_sip_contains    84 ns/iter
+{{< /high >}}
+
+(Times are in nanoseconds per operation. That is, on this data set, set
+membership for the FST data structure takes about 575 nanoseconds.)
+
+The benchmark names should indicate what is being tested. (The difference
+between `hash_fnv_contains` and `hash_sip_contains` is the type of hash
+function being used. The former uses a bog-standard Fowler-Noll-Vo hash,
+while the latter uses SipHash, which is cryptographically secure and slower.)
+
+This demonstrates that the FST based data structures do indeed have worse
+lookup performance than the classical general purpose data structures. However,
+the story isn't that bad. On this benchmark, FSTs are only `5x` slower than
+btrees. The particular reason why an FST might be slower is because it needs to
+do more work to decode the states and transitions in the underlying machine.
+This is a great example of a case where algorithmic time complexity doesn't get
+the last laugh. In particular, the lookup time for FSTs is `O(k)` where `k` is
+the length of the key while the lookup time for btrees is `O(klogn)`, where `n`
+is the number of elements in the set. The difference is that a btree likely has
+much faster access to its keys, despite needing to do more comparisons.
+
+Let's take a look at another data set: `100,000` Wikipedia URLs (from the
+Common Crawl data set).
+
+{{< high text >}}
+fst_contains        1,169 ns/iter
+btree_contains        415 ns/iter
+hash_fnv_contains     101 ns/iter
+hash_sip_contains     107 ns/iter
+{{< /high >}}
+
+The keys in this data set are quite a bit longer (URLs) than the previous
+data set (words from Gutenberg), which explains why the times have gone up
+for all data structures. The interesting thing to note here is that lookups
+for the FST data structure are now only `2.8x` slower than btree lookups. In
+fact, this is exactly what one would expect given the aforementioned time
+complexity guarantees. Namely, a btree needs to do `logn` comparisons, where
+each comparison takes `k` steps. On the other hand, the FST only needs to do
+`k` steps once. Since this data set has much longer keys, the cost of each `k`
+steps has gone up, which decreases the performance of btree lookups relative
+to FSTs. My hypothesis is that as the FST grows in both the number of keys and
+length of keys, it will get faster and faster than a btree.
+
+Beating a hashmap is probably a bit trickier, since the time it takes to
+compute a hash is `O(k)`. That's enough to get the corresponding value. A
+hashmap could in theory take `O(n)` time for a lookup in the worst case, but in
+my experience, this is rarely something to worry about (unless you're the one
+implementing the hashmap!).
 
 ## Lessons and trade offs
 
@@ -2279,10 +2380,121 @@ section to the downsides of FSTs.
 
 ### Not a general purpose data structure
 
+Despite the number of cool things you can do with FSTs, they are simply not
+suitable as a general purpose data structure. When writing code, if you need
+an unordered map or an ordered map, then you should be reaching straight for a
+`HashMap` or a `BTreeMap` immediately. An FST based data structure has a number
+of hurdles that you must cross before it becomes useful.
+
+First and foremost, how many keys do you expect to have? If you're unlikely see
+more than a few hundred thousand keys, then it's almost certainly better to use
+a simpler data structure. To support queries like fuzzy search or regular
+expressions, it's probably sufficient to do a simple linear scan over the keys
+since there aren't many of them.
+
+Secondly, what do your keys look like? What do your values look like? In this
+article, I introduced an FST based data structure that only knows how to store
+keys that are sequences of bytes, and it only knows how to store values that
+are unsigned 64 bit integers. If it's hard to get your keys/values into that
+format, then using an FST may not be worth it. (I note though, that it's
+typically possible with some work. For example, if your keys are 32 bit
+integers, then encoding them in a big-endian byte order such that every number
+occupies 4 bytes will work just great with an FST. It works because big-endian
+preserves the natural ordering of integers through lexicographic ordering.
+Notably, a little-endian encoding would not work!
+[Here's a quick toy example
+that stores a set of prime
+integers](https://gist.github.com/anonymous/61ae8b305e6abff3291c).)
+
+Thirdly, do your keys have a sensible ordering defined on them? Is it feasible
+to sort them? In particular, while it's usually possible to come up with an
+ordering, you need to make sure it is preserved lexicographically after
+transforming it to bytes (otherwise range queries won't work). Sorting the keys
+also usually isn't a show stopper, since you can batch your keys, sort them and
+create intermediate FSTs that can later be unioned. But this is an additional
+cost; it may or may not be worth paying in your case.
+
+Fourthly, do you require regular mutation? Standard data structures like
+`HashMap` and `BTreeMap` permit the caller to add, remove or change keys and
+their values with reckless abandon. An FST based data structure as presented in
+this article does not have this capability. Namely, once it is produced, it
+cannot be changed. As with the other hurdles, this problem is also
+surmountable, but it requires creating a new FST for every mutation. Making
+that feasible depends on whether you can batch your mutations, which would
+enable one to periodically create new FSTs instead of a new FST for every
+change.
+
 ### More useful on 64 bit systems
+
+Another important caveat to using the `fst` crate presented in this article is
+that it is more robust on 64 bit systems. Namely, since the `fst` crate heavily
+favors using memory maps, it must address the contents of a file with a
+pointer. If you're on a 32 bit system, then the type of a pointer can address
+at most `4 GB` of data, which means your FSTs are capped at that size (but
+likely less, depending on the availability of virtual memory in your system).
+For example, this would make building *and* searching the Common Crawl FST
+impossible. (If you built it on a 64 bit system, transferred it to a 32 bit
+system and tried to search it, the `fst` crate will
+[panic](https://doc.rust-lang.org/stable/book/error-handling.html#the-basics),
+which will typically cause the program to abort.)
+
+On a 64 bit system, the size of your FST is effectively limited to available
+*virtual* memory. On a 64 bit system, there is a
+[large abundance of virtual
+memory](http://superuser.com/questions/168114/how-much-memory-can-a-64bit-machine-address-at-a-time).
+
+Therefore, if you're using FSTs on a 32 bit system, then you'll need to take
+care to limit the size of the FSTs you produce. This is a little tricky since
+there's no way to know how big the FST will be until it's actually created.
+This also means that any process that wants to search an FST will have to
+search all component FSTs in a way that doesn't exhaust available virtual
+memory.
 
 ### Requires fast random access
 
+The format of an FST in memory and on disk heavily depends on the ability to
+quickly access any particular byte of the FST. There is unfortunately little
+locality of reference. (There may be some, but it requires more analysis to
+confirm and is likely heavily tied to how redundancy in the keys is exploited.)
+This means that if your FST is on a mechanical disk and it isn't in memory
+yet, then a query could potentially be quite slow. This is mostly mitigated by
+using an SSD, which has zero latency seeks, which obviously supports the random
+access use case well.
+
+If your FSTs are *really* big, then SSDs could be prohibitively expensive. But
+as we've shown in the experiments above, even with over 1 billion keys, the FST
+grew to only `27 GB`. At that rate, using SSDs seems pretty cost effective. In
+fact, even using RAM at that level of memory usage could be cost effective. A
+machine with `61 GB` of RAM, for example, is going for `$0.0961/hour` as an
+Amazon EC2 spot instance (`r3.2xlarge`) right now.
+
+The "keep the FST in RAM" use case is well supported by the `fst` crate.
+Despite my insistence on using memory maps, it is also of course possible to
+store an FST directly on the heap, which means you won't be susceptible to the
+operating system's page cache. (Of course, you may still be susceptible to
+swapping, but as I understand it, most folks disable that these days.)
+
+## Conclusion
+
+Thank you for sticking with me this far! My hope is that this article taught
+you a little something about using finite state machines as a data structure,
+which enable storing a large number of keys in a small amount of space while
+remaining easily searchable.
+
+We also briefly covered an efficient implementation of the ideas in this
+article. This implementation is provided as part of the
+[`fst`](https://github.com/BurntSushi/fst) crate written in Rust.
+It comes with complete
+[API documentation and examples](http://burntsushi.net/rustdoc/fst/).
+
+Finally, you may be interested in other work I've done in Rust with strings:
+
+* [`regex`](https://github.com/rust-lang-nursery/regex) - Mostly fast regular
+  expressions.
+* [`suffix`](https://github.com/BurntSushi/suffix) - Linear time suffix array
+  construction.
+* [`aho-corasick`](https://github.com/BurntSushi/aho-corasick) - Extremely fast
+  multiple substring search.
 
 <!--
 Initial number of urls: 7,563,934,593
