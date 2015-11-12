@@ -13,7 +13,7 @@ Lately, I've become quite enamored with [Rust](http://www.rust-lang.org/). I
 very much enjoy the particular trade offs made in the language and like the
 direction that language is headed towards.
 
-#### [Regular expressions](https://github.com/rust-lang/regex)
+#### [Regular expressions](https://github.com/rust-lang-nursery/regex)
 
 A port of RE2 to Rust. It also features a `regex!` macro that will
 [compile a regex to native code](/rust-regex-syntax-extensions)
@@ -75,6 +75,16 @@ package.
 A simple crate for reading and writing integers in a binary format. Its purpose
 is to handle endianness conversions automatically.
 
+#### [walkdir](https://github.com/BurntSushi/walkdir)
+
+A crate for recursively iterating over a directory tree efficiently.
+It includes following symbolic links and a way to limit the number of
+simultaneously open file descriptors.
+
+#### [chan](https://github.com/BurntSushi/chan)
+
+Golang style multi-producer/multi-receiver channels. Includes a
+`select_chan!` macro with semantics similar to Go's `select` statement.
 
 ### Go projects
 
