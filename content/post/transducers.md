@@ -2057,15 +2057,15 @@ In particular, the default batch size is `100,000` keys, and the `fst` command
 will sort multiple batches in parallel. Dropping the batch size will reduce the
 amount of memory required by the process.
 
-However, that still isn't doesn't explain the total memory usage! In fact, part
-of the "resident set size" reported by the `time` command includes data read
-from memory maps that is resident in memory. Since all of the intermediate FSTs
-created from each batch must be read entirely in order to merge them, it
+However, that still doesn't explain the total memory usage! In fact, part of
+the "resident set size" reported by the `time` command includes data read
+from memory maps that is resident in memory. Since all of the intermediate
+FSTs created from each batch must be read entirely in order to merge them, it
 follows that the OS had to read all data from each FST into memory. Notably,
-this data isn't actually part of the heap space in our process. This means that
-if your system needs it, the OS can actually swap out unused memory that was
-initially claimed by the memory map without necessarily impacting the
-performance of construction (since once a part of the FST is read and
+this data isn't actually part of the heap space in our process. This means
+that if your system needs it, the OS can actually swap out unused memory
+that was initially claimed by the memory map without necessarily impacting
+the performance of construction (since once a part of the FST is read and
 processed, it is no longer needed).
 
 In short, memory usages when using FSTs and memory maps can be tricky to
