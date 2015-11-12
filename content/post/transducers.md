@@ -477,7 +477,7 @@ limited to things with the following operations defined:
 Outputs must also have an additive identity, `I`, such that the following laws
 hold:
 
-* `x + I = 0`
+* `x + I = x`
 * `x - I = x`
 * `prefix(x, y) = I` when `x` and `y` do not share a common prefix.
 
@@ -1245,10 +1245,13 @@ difference is that the operating system manages the cache instead of us. This
 is a dramatic simplification in the implementation. Of course, there are some
 costs. Since the operating system manages the cache, it can't know that certain
 parts of the FST should always stay in memory. Therefore, on occasion, we may
-not have optimal query times.
+not have optimal query times. These downsides can be mitigated somewhat through
+the use of calls like `mlock` or `madvise`, which permits your process to tell
+the operating system that certain regions of the memory map should stay in or
+out of memory.
 
-The `fst` crate supports using memory maps. Here is our previous example, but
-modified to use a memory map:
+The `fst` crate supports using memory maps (but does not yet use `mlock` or
+`madvise`). Here is our previous example, but modified to use a memory map:
 
 {{< code-rust "read-set-file" >}}
 use fst::Set;
@@ -1293,7 +1296,7 @@ insertions, deletions and substitutions one must perform to transform `A` into
 * `dist("foo", "fo") == 1` (one deletion)
 * `dist("foo", "foob") == 1` (one insertion)
 * `dist("foo", "fob") == 1` (one substitution)
-* `dist("foo", "fobo") == 2` (one substitution, one insertion)
+* `dist("foo", "fobc") == 2` (one substitution, one insertion)
 
 There are a
 [variety of ways](https://en.wikipedia.org/wiki/Levenshtein_distance#Computing_Levenshtein_distance)
