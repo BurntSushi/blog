@@ -316,7 +316,7 @@ transitions in lexicographic order. For example:
 * Move to state `3`. Add `n` to `key`. **Emit** `jun`.
 * Move back to state `5`. Drop `n` from `key`.
 * Move back to state `4`. Drop `u` from `key`.
-* Move back to state `3`. Drop `j` from `key`.
+* Move back to state `0`. Drop `j` from `key`.
 * Move to state `1`. Add `m` to `key`.
 * Move to state `2`. Add `a` to `key`.
 * Move to state `3`. Add `r` to `key`. **Emit** `mar`.
