@@ -26,8 +26,7 @@ mainstream American cuisine.
 I occasionally allow myself to get sucked into pointless debates online.
 
 I dislike living in a city more than I dislike commuting. I dislike cities
-because of their population density. (This comment may seem out of place,
-but most people are baffled at my distaste for urban life.)
+because of their population density.
 
 
 ### Contact
