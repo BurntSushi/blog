@@ -19,6 +19,13 @@ A port of RE2 to Rust. It also features a `regex!` macro that will
 [compile a regex to native code](/rust-regex-syntax-extensions)
 when your Rust program compiles.
 
+#### [ripgrep](https://github.com/BurntSushi/ripgrep)
+
+A search tool that combines the usability of The Silver Searcher with the raw
+speed of GNU grep. I wrote a blog post detailing a benchmark and how I achieved
+such high performance:
+[ripgrep is faster than {grep, ag, git grep, ucg, pt, sift}](/ripgrep/).
+
 #### [QuickCheck](https://github.com/BurntSushi/quickcheck)
 
 This was my first Rust project. If you've never heard of QuickCheck before,
