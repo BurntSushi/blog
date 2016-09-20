@@ -52,6 +52,9 @@ working on the command line.
     * [Background](#background)
     * [Gathering files to search](#gathering-files-to-search)
     * [Searching](#searching)
+        * [Regex engine](#regex-engine)
+        * [Literal optimizations](#literal-optimizations)
+        * [Mechanics](#mechanics)
     * [Printing](#printing)
 * [Methodology](#methodology)
     * [Overview](#overview)
@@ -70,6 +73,13 @@ working on the command line.
     * [`linux_unicode_greek_casei`](#linux-unicode-greek-casei)
     * [`linux_no_literal`](#linux-no-literal)
 * [Single file benchmarks](#single-file-benchmarks)
+    * [`subtitles_literal`](#subtitles-literal)
+    * [`subtitles_literal_casei`](#subtitles-literal-casei)
+    * [`subtitles_literal_word`](#subtitles-literal-word)
+    * [`subtitles_alternate`](#subtitles-alternate)
+    * [`subtitles_alternate_casei`](#subtitles-alternate-casei)
+    * [`subtitles_surrounding_words`](#subtitles-surrounding-words)
+    * [`subtitles_no_literal`](#subtitles-no-literal)
 
 
 ## Introducing ripgrep
@@ -289,14 +299,14 @@ passed to control which files are or aren't searched.
 behavior on its head. Instead of trying to search everything by default, `ack`
 tries to be smarter about what to search. For example, it will recursively
 search your current directory *by default*, and it will automatically skip over
-any files that have been ignored by your source control configuration (e.g.,
-`.gitignore`). This method of searching undoubtedly has its own pros and cons,
-because it tends to make the tool "smarter," which is another way of saying
-"opaque." That is, when you really do need the tool to search everything, it
-can sometimes be tricky to know how to speak the right incantation for it to do
-so. With that said, being smart by default is incredibly convenient, especially
-when "smart" means "figure out what to search based on your source control
-configuration." There's no shell alias that can do that with `grep`.
+any source control specific files and directories (like `.git`). This method
+of searching undoubtedly has its own pros and cons, because it tends to make
+the tool "smarter," which is another way of saying "opaque." That is, when
+you really do need the tool to search everything, it can sometimes be tricky
+to know how to speak the right incantation for it to do so. With that said,
+being smart by default is incredibly convenient, especially when "smart" means
+"figure out what to search based on your source control configuration." There's
+no shell alias that can do that with `grep`.
 
 All of the other search tools in this benchmark share a common ancestor with
 either `grep` or `ack`. `sift` is descended from `grep`, while `ag`, `ucg`, and
@@ -306,10 +316,11 @@ the same time, provide the "smart" kind of default searching like `ack`.
 Finally, `git grep` deserves a bit of a special mention. `git grep` is very
 similar to plain `grep` in the kinds of options it supports, but its default
 mode of searching is clearly descended from `ack`: it will only search files
-checked into your source control.
+checked into source control.
 
 Of course, both types of search tools have *a lot* in common, but there are a
-few broad points worth making if you allow yourself to squint your eyes a bit:
+few broad distinctions worth making if you allow yourself to squint your eyes a
+bit:
 
 * `grep`-like tools need to be really good at searching large files, so the
   performance of the underlying regex library is paramount.
@@ -326,7 +337,7 @@ few broad points worth making if you allow yourself to squint your eyes a bit:
 
 ### Gathering files to search
 
-For an `ack`-like tool, it is paramount to figure out which files to search in
+For an `ack`-like tool, it is important to figure out which files to search in
 the current directory. This means using a very fast recursive directory
 iterator, filtering file paths quickly and distributing those file paths to a
 pool of workers that actually execute the search.
@@ -368,15 +379,215 @@ hole on just this section alone and not come out alive for at least 2.5 years.
 (Welcome to "How Long I've Been Working On Text Search In Rust.") Instead, we
 will lightly touch on the big points.
 
+#### Regex engine
+
 First up is the regex engine. Every search tool supports some kind of syntax
-for regular expressions.
+for regular expressions. Some examples:
 
-Secondly is figuring out how to avoid using the regex engine you picked.
+* `foo|bar` matches any literal string `foo` or `bar`
+* `[a-z]{2}_[a-z]+` matches two lowercase latin letters, followed by an
+  underscore, followed by one or more lowercase latin letters.
+* `\bfoo\b` matches the literal `foo` only when it is surrounded by word
+  boundaries. For example, the `foo` in `foobar` won't match but it will in
+  `I love foo.`.
+* `(\w+) \1` matches any sequence of word characters followed by a space and
+  followed by exactly the word characters that were matched previously. The
+  `\1` in this example is called a "back-reference." For example, this pattern
+  will match `foo foo` but not `foo bar`.
 
-Thirdly is the actual mechanics of searching. Do you memory map every file? Do
-you read the entire file into memory explicitly? Or do you do incremental reads
-into an intermediate buffer and search that instead? All three of these
-approaches are used among the search tools we benchmark in this article.
+Regular expression engines themselves tend to be divided into two categories
+predominantly based on the features they expose. Regex engines that provide
+support for all of the above tend to use an approach called *backtracking*,
+which is typically quite fast, but can be very slow on some inputs. "Very
+slow" in this case means that it might take exponential time to complete a
+search. For example, try running this Python code:
+
+{{< high python >}}
+>>> import re
+>>> re.search('(a*)*c', 'a' * 30)
+{{< /high >}}
+
+Even though both the regex and the search string are tiny, it will take a very
+long time to terminate, and this is because the underlying regex engine uses
+backtracking, and can therefore take exponential time to answer some queries.
+
+The other type of regex engine generally supports fewer features and is based
+on finite automata. For example, these kinds of regex engines typically don't
+support back-references. Instead, these regex engines will often provide a
+guarantee that *all searches*, regardless of the regex or the input, will
+complete in linear time with respect to the search text.
+
+It's worth pointing out that neither type of engine has a monopoly on average
+case performance. There are examples of regex engines of both types that are
+blazing fast. With that said, here's a breakdown of some search tools and the
+type of regex engine they use:
+
+* GNU grep and `git grep` each use their own hand-rolled finite automata based
+  engine.
+* `ripgrep` uses
+  [Rust's regex library](https://github.com/rust-lang-nursery/regex),
+  which uses finite automata.
+* The Silver Searcher and Universal Code Grep use [PCRE](http://www.pcre.org/),
+  which uses backtracking.
+* Both The Platinum Searcher and sift use
+  [Go's regex library](https://golang.org/pkg/regexp/),
+  which uses finite automata.
+
+Both Rust's regex library and Go's regex library share Google's
+[RE2](https://github.com/google/re2)
+as a common ancestor.
+
+Finally, both tools that use PCRE (The Silver Searcher and Universal Code Grep)
+are susceptible to worst case backtracking behavior. For example:
+
+{{< high sh >}}
+$ cat wat
+c
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+c
+$ ucg '(a*)*c' wat
+terminate called after throwing an instance of 'FileScannerException'
+  what():  PCRE2 match error: match limit exceeded
+Aborted (core dumped)
+{{< /high >}}
+
+The Silver Searcher fails similarly. It reports the first line as a match and
+neglects the match in the third line. The rest of the search tools benchmarked
+in this article handle this case without a problem.
+
+#### Literal optimizations
+
+Picking a fast regex engine is important, because every search tool will need
+to rely on it sooner or later. Nevertheless, even the performance of the
+fastest regex engine can be dwarfed by the time it takes to search for a simple
+literal string.
+[Boyer-Moore](https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore_string_search_algorithm)
+is the classical algorithm that is used to find a substring, and even today, it
+is hard to beat for general purpose searching. One of its defining qualities is
+its ability to skip some characters in the search text by pre-computing a small
+skip table at the beginning of the search.
+
+On modern CPUs, the key to making a Boyer-Moore implementation fast is not
+necessarily the number of characters it can skip, but how fast it can identify
+a candidate for a match. For example, most Boyer-Moore implementations look for
+the *last* byte in a literal. Each occurrence of that byte is considered a
+candidate for a match by Boyer-Moore. It is only at this point that Boyer-Moore
+can use its precomputed table to skip characters, which means you still need a
+fast way of identifying the candidate in the first place. Thankfully,
+specialized routines found in the C standard library, like
+[`memchr`](http://man7.org/linux/man-pages/man3/memchr.3.html),
+exist for precisely this purpose. Often, `memchr` implementations are compiled
+down to SIMD instructions that examine *sixteen* bytes in a single loop
+iteration. This makes it very fast. On my system, `memchr` often gets
+throughputs at around several gigabytes a second. (In my own experiments,
+Boyer-Moore with `memchr` can be just as fast as an explicit SIMD
+implementation using the
+[PCMPESTRI](https://software.intel.com/sites/landingpage/IntrinsicsGuide/#text=PCMPESTR&expand=786)
+instruction, but this is something I'd like to revisit.)
+
+For a search tool to compete in most benchmarks, either it or its regex engine
+needs to use some kind of literal optimizations. For example, Rust's regex
+library goes to great lengths to extract both prefix and suffix literals from
+every pattern. For example, the following patterns all have literals extracted
+from them:
+
+* `foo|bar` detects `foo` and `bar`
+* `(a|b)c` detects `ac` and `bc`
+* `[ab]foo[yz]` detects `afooy`, `afooz`, `bfooy` and `bfooz`
+* `(foo)?bar` detects `foobar` and `bar`
+* `(foo)*bar` detects `foo` and `bar`
+* `(foo){3,6}` detects `foofoofoo`
+
+If any of these patterns appear at the *beginning* of a regex, Rust's regex
+library will notice them and use them to find candidate matches very quickly
+(even when there is more than one literal detected). While Rust's core regex
+engine is fast, it is still faster to look for literals first, and only drop
+down into the core regex engine when it's time to verify a match.
+
+The best case happens when an entire regex can be broken down into a single
+literal or an alternation of literals. In that case, the core regex engine
+won't be used at all!
+
+A search tool in particular has an additional trick up its sleeve. Namely,
+since most search tools do line-by-line searching (The Silver Searcher is a
+notable exception, which does multiline searching by default), they can extract
+*non-prefix* or "inner" literals from a regex pattern, and search for those to
+identify candidate *lines* that match. For example, the regex `\w+foo\d+` could
+have `foo` extracted. Namely, when a candidate line is found, `ripgrep` will
+find the beginning and end of only that line, and then run the full regex
+engine on the entire line. This lets `ripgrep` very quickly skip through files
+by staying out of the regex engine. Most of the search tools we benchmark here
+don't perform this optimization, which can leave a lot of performance on the
+table, especially if your core regex engine isn't that fast.
+
+Handling the case of multiple literals (e.g., `foo|bar`) is just as important.
+GNU grep uses a little known algorithm similar to
+[Commentz-Walter](https://en.wikipedia.org/wiki/Commentz-Walter_algorithm)
+for searching multiple patterns. In short, Commentz-Walter is what you get when
+you merge
+[Aho-Corasick](https://en.wikipedia.org/wiki/Aho%E2%80%93Corasick_algorithm)
+with Boyer-Moore: a skip table with a *reverse* automaton.
+Rust's regex library, on the other hand, will either use plain Aho-Corasick,
+or, when enabled, a special
+[SIMD algorithm called
+Teddy](https://github.com/rust-lang-nursery/regex/blob/3de8c44f5357d5b582a80b7282480e38e8b7d50d/src/simd_accel/teddy128.rs),
+which was invented by Geoffrey Langdale as part of the
+[Hyperscan regex library](https://github.com/01org/hyperscan)
+developed by Intel. This SIMD algorithm will prove to be at least one of the
+key optimizations that propels `ripgrep` past GNU grep.
+
+The great thing about this is that `ripgrep` doesn't have to do much of this
+literal optimization work itself. Most of it is done inside Rust's regex
+library, so every consumer of that library gets all these performance
+optimizations automatically!
+
+#### Mechanics
+
+Repeat after me: Thou Shalt Not Search Line By Line.
+
+The naive approach to implementing a search tool is to read a file line by line
+and apply the search pattern to each line individually. This approach is
+problematic primarily because, in the common case, finding a match is *rare*.
+Therefore, you wind up doing a ton of work parsing out each line all for
+naught, because most files simply aren't going to match at all in a large
+repository of code.
+
+Not only is finding every line extra work that you don't need to do, but you're
+also paying a huge price in overhead. Whether you're searching for a literal or
+a regex, you'll need to start and stop that search for every single line in a
+file. The overhead of each search will be your undoing.
+
+Instead, all search tools find a way to search a big buffer of bytes all at
+once. Whether that's memory mapping a file, reading an entire file into memory
+at once or incrementally searching a file using a constant sized intermediate
+buffer, they all find a way to do it to some extent. There are some exceptions
+though. For example, tools that use memory maps or read entire files into
+memory either can't support `stdin` (like Universal Code Grep), or revert to
+line-by-line searching (like The Silver Searcher). Tools that support
+incremental searching (`ripgrep`, GNU grep and `git grep`) can use its
+incremental approach on any file or stream with no problems.
+
+There's a reason why not every tool implements incremental search: it's *hard*.
+For example, you need to consider all of the following in a fully featured
+search tool:
+
+* Line counting, when requested.
+* If a read from a file ends in the middle of a line, you need to do the
+  bookkeeping required to make sure the incomplete line isn't searched until
+  more data is read from the file.
+* If a line is too long to fit into your buffer, you need to decide to either
+  give up or grow your buffer to fit it.
+* Your searcher needs to know how to invert the match.
+* Worst of all: your searcher needs to be able to show the context of a match,
+  e.g., the lines before and after a matching line. For example, consider the
+  case of a match that appears at the beginning of your buffer. How do you show
+  the previous lines if they aren't in your buffer? You guessed it: you need to
+  carry over at least as many lines that are required to satisfy a context
+  request from buffer to buffer.
+
+It's a steep price to pay in terms of code complexity, but by golly, is it
+worth it. You'll need to read on to the benchmarks to discover when it is
+faster than memory maps!
 
 ### Printing
 
@@ -417,7 +628,6 @@ search where as The Silver Searcher always memory maps the entire file and
 Universal Code Grep always `read`s the entire contents of the file into memory.
 The latter approach can refer back to the file's contents in memory when doing
 the actual printing, where as neither `git grep` nor `ripgrep` can do that.
-(The key advantage is constant memory usage and probably better performance.)
 
 ## Methodology
 
@@ -448,7 +658,7 @@ go over some important insights that guided construction of this benchmark.
   necessarily good at the other. (The premise of `ripgrep` is that it is
   possible to be good at both!)
 * Apply *end user* problems more granularly as well. For example, most
-  searches result in few hits relative to the corpus search, so prefer
+  searches result in few hits relative to the corpus searched, so prefer
   benchmarks that report few matches. Another example: I hypothesize, based on
   my own experience, that most searches use patterns that are simple literals,
   alternations or very light regexes, so bias the benchmarks towards those
@@ -481,8 +691,9 @@ what tools are we benchmarking?
   (commit `cda635`, using PCRE 8.38) - Like `ack`, but written in C and much
   faster. Reads your `.gitignore` files just like `ripgrep`.
 * [Universal Code Grep (ucg)](https://github.com/gvansickle/ucg) (commit
-  `487bfb`, using PCRE 10.21) - Also like `ack` but written in C++, and only
-  searches files from a whitelist, and doesn't support reading `.gitignore`.
+  `487bfb`, using PCRE 10.21 **with the JIT enabled**) - Also like `ack` but
+  written in C++, and only searches files from a whitelist, and doesn't support
+  reading `.gitignore`.
 * [The Platinum Searcher
 (pt)](https://github.com/monochromegane/the_platinum_searcher) (commit
   `509368`) - Written in Go and does support `.gitignore` files.
@@ -595,12 +806,12 @@ Without further ado, let's start looking at benchmarks.
 
 ### `linux_literal_default`
 
-**Pattern**: `PM_RESUME`
-
 **Description**: This benchmark compares the time it takes to execute a simple
 literal search using each tool's default settings. This is an intentionally
 unfair benchmark meant to highlight the differences between tools and their
 "out-of-the-box" settings.
+
+**Pattern**: `PM_RESUME`
 
 {{< high text >}}
 rg         0.277 +/- 0.002 (lines: 16)
@@ -707,8 +918,6 @@ that you needed to).
 
 ### `linux_literal`
 
-**Pattern**: `PM_RESUME`
-
 **Description**: This benchmark runs the same query as in the
 [`linux_literal_default`](#linux-literal-default)
 benchmark, but we try to do a fair comparison. In particular, we run `ripgrep`
@@ -721,6 +930,8 @@ to use memory maps for search, which matches the implementation strategy used
 by `ag`. `sift` is run such that it respects `.gitignore` files and excludes
 binary, hidden and PDF files. All commands executed here count lines, because
 some commands (`ag` and `ucg`) don't support disabling line counting.
+
+**Pattern**: `PM_RESUME`
 
 {{< high text >}}
 rg (ignore)          0.348 +/- 0.054 (lines: 16)
@@ -742,15 +953,18 @@ First and foremost, the `(ignore)` vs. `(whitelist)` variables have a clear
 impact on the performance of `rg`. We won't rehash all the details from the
 analysis in
 [`linux_literal_default`](#linux-literal-default),
-but switching `rg` into its whitelist mode rings it into a dead heat with
-b`ucg`.
+but switching `rg` into its whitelist mode brings it into a dead heat with
+`ucg`.
 
 Secondly, `ucg` is just as fast as `ripgrep`, even though I've said that
 `ripgrep` is the fastest. It turns out that `ucg` and `rg` are pretty evenly
 matched when searching for plain literals in large repositories. We will see a
 stronger separation in later benchmarks. Still, what makes `ucg` fast?
 
-* Like `ripgrep`, `ucg` does searching with an intermediate buffer.
+* `ucg` reads the entire file into memory before searching it, which means it
+  avoids the memory map problem described below. On a code repository, this
+  approach works well, but it comes with a steep price in the single-file
+  benchmarks.
 * It has a fast explicitly SIMD based line counting algorithm. `ripgrep` has
   something similar, but relies on the compiler for autovectorization.
 * `ucg` uses PCRE2's JIT, which is *insanely* fast. In my own very rough
@@ -768,8 +982,8 @@ Both `sift` and `pt` perform almost as well as `ripgrep`. In fact, both `sift`
 and `pt` do implement a parallel recursive directory traversal while
 still respecting `.gitignore` files, which is likely one reason for their
 speed. As we will see in future benchmarks, their speed here is misleading.
-Namely, they are fast because they stay outside of Go's regexp engine by virtue
-of being a literal. (There will be more discussion on this point later.)
+Namely, they are fast because they stay outside of Go's regexp engine since the
+pattern is a literal. (There will be more discussion on this point later.)
 
 Finally, what's going on with The Silver Searcher? Is it really that much
 slower than everything else? The key here is that its use of memory maps is
@@ -851,11 +1065,11 @@ are still supported by this data, but the difference between `rg (ignore)` and
 
 ### `linux_literal_casei`
 
-**Pattern**: `PM_RESUME` (with the `-i` flag set)
-
 **Description**: This benchmark is like
 [`linux_literal`](#linux-literal),
 except it asks the search tool to perform a case insensitive search.
+
+**Pattern**: `PM_RESUME` (with the `-i` flag set)
 
 {{< high text >}}
 rg (ignore)          0.423 +/- 0.118 (lines: 370)
@@ -906,11 +1120,11 @@ But still, is Go's regexp engine really that slow? Unfortunately, yes, it is.
 While Go's regexp engine takes worst case linear time on all searches (and is
 therefore exponentially faster than even PCRE2 for some set of regexes and
 corpora), its actual implementation hasn't quite matured yet. Indeed, every
-*fast* regex engine based on finite automata (like Go's regexp engine) that I'm
-aware of implements some kind of DFA engine. For example, GNU grep, Google's
-RE2 and Rust's regex library all do this. Go's does not (but there is work in
-progress to make this happen, so perhaps `pt` will get faster on this benchmark
-without having to do anything at all!).
+*fast* regex engine based on finite automata that I'm aware of implements
+some kind of DFA engine. For example, GNU grep, Google's RE2 and Rust's regex
+library all do this. Go's does not (but there is work in progress to make this
+happen, so perhaps `pt` will get faster on this benchmark without having to do
+anything at all!).
 
 There is one other thing worth noting here before moving on. Namely, that `rg`,
 `ag`, `git grep` and `ucg` didn't noticeably change much from the previous
@@ -977,14 +1191,14 @@ we will see much larger wins in later benchmarks.
 
 ### `linux_word`
 
-**Pattern**: `PM_RESUME` (with the `-w` flag set)
-
 **Description**: This benchmarks the `PM_RESUME` literal again, but adds the
 `-w` flag to each tool. The `-w` flag has the following behavior: all matches
 reported must be considered "words." That is, a "word" is something that starts
 and ends at a word boundary, where a word boundary is defined as a position in
 the search text that is adjacent to both a word character and a non-word
 character.
+
+**Pattern**: `PM_RESUME` (with the `-w` flag set)
 
 {{< high text >}}
 rg (ignore)         0.329 +/- 0.035 (lines: 6)
@@ -1023,14 +1237,14 @@ Go's regexp library, but in a much more limited form.
 
 ### `linux_unicode_word`
 
-**Pattern**: `\wAh`
-
 **Description**: This benchmarks a simple query for all prefixed forms of the
 "amp-hour" (Ah) unit of measurement. For example, it should show things like
 `mAh` (for milliamp-hour) and `µAh` (for microamp-hour). It is particularly
 interesting because the second form starts with `µ`, which is part of a Unicode
 aware `\w` character class, but not an ASCII-only `\w` character class. We
 again continue to control for the overhead of respecting `.gitignore` files.
+
+**Pattern**: `\wAh`
 
 {{< high text >}}
 rg (ignore)                 0.350 +/- 0.084 (lines: 186)
@@ -1079,12 +1293,10 @@ grep (ignore)` report the same set of results.
 reasoning for this is that it has finally needed to use Go's regexp library.
 See the analysis in
 [`linux_literal_casei`](#linux-literal-casei) for more details. Indeed, the
-performance of `pt` on this
-[`linux_word`](#linux-word)
-benchmark roughly matches that of `sift` since they are both bottlenecked by
-Go's regexp library. As in the previous benchmark, `sift` could do better here
-by searching for the `Ah` literal, and only using Go's regexp library to verify
-a match.)
+performance of `pt` on this benchmark roughly matches that of `sift` since they
+are both bottlenecked by Go's regexp library. As in the previous benchmark,
+`sift` could do better here by searching for the `Ah` literal, and only using
+Go's regexp library to verify a match.)
 
 Looking at the benchmark results, I can think of two important questions to
 ask:
@@ -1097,12 +1309,10 @@ ask:
 
 I actually don't have a great answer for (1). In the case of `rg` at least,
 it will extract the `Ah` literal suffix from the regex and use that to find
-candidate matches before running the `\w` prefix. While `git grep` (and GNU
-grep) have sophisticated literal extraction as well, the code is hairy and it
-wouldn't be right for me to proclaim whether or not `git grep` is actually
-doing the literal optimization in this case. However, my current best guess is
-that it's *not* extracting the literal and instead just running the regex over
-the entire search text.
+candidate matches before running the `\w` prefix. While GNU grep has
+sophisticated literal extraction as well, it looks like `git grep` doesn't go
+to similar lengths to extract literals. (I'm arriving at this conclusion after
+skimming the source of `git grep`, so I could be wrong.)
 
 In the case of `ucg`, it's likely that PCRE2 is doing a similar literal
 optimization that `rg` is doing.
@@ -1126,11 +1336,11 @@ to UTF-8 (or otherwise "ASCII compatible" text encodings) at the moment.
 
 ### `linux_re_literal_suffix`
 
-**Pattern**: `[A-Z]+_RESUME`
-
 **Description**: This benchmarks a simple regex pattern that ends with a
 literal. We continue to control for the overhead of respecting `.gitignore`
 files.
+
+**Pattern**: `[A-Z]+_RESUME`
 
 {{< high text >}}
 rg (ignore)         0.398 +/- 0.046 (lines: 1652)
@@ -1162,10 +1372,11 @@ each underlying regex library does literal search.
 
 ### `linux_alternates`
 
-**Pattern**: `ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT`
-
 **Description**: This benchmarks an alternation of four literals. The literals
-were specifically chosen to start with four distinct bytes.
+were specifically chosen to start with four distinct bytes to make it harder to
+optimize.
+
+**Pattern**: `ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT`
 
 {{< high text >}}
 rg (ignore)         0.322 +/- 0.042 (lines: 68)
@@ -1202,14 +1413,14 @@ fast.
 
 ### `linux_alternates_casei`
 
-**Pattern**: `ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT` (with the `-i`
-flag set)
-
 **Description**: This benchmark is precisely the same as the
 [`linux_alternates`](#linux-alternates)
 benchmark, except we make the search case insensitive by adding the `-i` flag.
 Note that `git grep` is run under ASCII mode, in order to give it every chance
-to best fast.
+to be fast.
+
+**Pattern**: `ERR_SYS|PME_TURN_OFF|LINK_REQ_RST|CFG_BME_EVT` (with the `-i`
+flag set)
 
 {{< high text >}}
 rg (ignore)         0.372 +/- 0.096 (lines: 160)
@@ -1285,12 +1496,12 @@ regex engine.
 
 ### `linux_unicode_greek`
 
-**Pattern**: `\p{Greek}` (matches any Greek symbol)
-
 **Description**: This benchmarks usage of a particular Unicode feature that
 permits one to match a certain class of codepoints defined in Unicode. Both
 Rust's regex engine and Go's regex engine support this natively, but none of
 the other tools do.
+
+**Pattern**: `\p{Greek}` (matches any Greek symbol)
 
 {{< high text >}}
 rg     0.470 +/- 0.049 (lines: 23)*+
@@ -1309,13 +1520,13 @@ states it is in.
 
 ### `linux_unicode_greek_casei`
 
-**Pattern**: `\p{Greek}` (with the `-i` flag set, matches any Greek symbol)
-
 **Description**: This benchmark is just like the
 [`linux_unicode_greek`](#linux-unicode-greek)
 benchmark, except it makes the search case insensitive. This particular query
 is a bit idiosyncratic, but it does demonstrate just how well supported Unicode
 is in `rg`.
+
+**Pattern**: `\p{Greek}` (with the `-i` flag set, matches any Greek symbol)
 
 {{< high text >}}
 rg     0.415 +/- 0.019 (lines: 103)
@@ -1338,7 +1549,7 @@ state machine.
 One interesting thing to note about this search is that if you run it, you'll
 see a lot more results containing the character `µ`, which looks essentially
 identical to the character `μ` that also shows up in a case sensitive search.
-As you might have guessed, even those these two characters look the same, they
+As you might have guessed, even though these two characters look the same, they
 are in fact distinct Unicode codepoints:
 
 * `µ` is `MICRO SIGN` with codepoint `U+000000B5`.
@@ -1355,8 +1566,6 @@ group.
 
 ### `linux_no_literal`
 
-**Pattern**: `\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}`
-
 **Description**: This is the last benchmark on the Linux kernel source code and
 is a bit idiosyncratic like
 [`linux_unicode_greek_casei`](#linux-unicode-greek-casei).
@@ -1366,6 +1575,8 @@ distinction of this pattern from every other pattern in this benchmark is that
 it does not contain any literals. Given the presence of `\w` and `\s`, which
 have valid Unicode and ASCII interpretations, we attempt to control for the
 presence of Unicode support.
+
+**Pattern**: `\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}`
 
 {{< high text >}}
 rg (ignore)                 0.581 +/- 0.002 (lines: 490)
@@ -1406,7 +1617,7 @@ What makes `rg` so fast here? And what actually causes the 0.3x penalty?
 `rg` continues to be fast on this benchmark primarily for the same reason why
 it's fast with other Unicode-centric benchmarks: it compiles the UTF-8 decoding
 right into its deterministic finite state machine. This means there is no extra
-step to decode the search text into Unicode codepoint first. We can match
+step to decode the search text into Unicode codepoints first. We can match
 directly on the raw bytes.
 
 To a first approximation, the performance penalty comes from compiling the DFA
@@ -1417,7 +1628,7 @@ idea of the size difference:
 * The ASCII DFA has about **250** distinct NFA states.
 * The Unicode DFA has about **77,000** distinct NFA states.
 
-(These numbers are produced directly from the compiler in Rust's regex crate,
+(These numbers are produced directly from the compiler in Rust's regex library,
 and don't necessarily reflect a minimal automaton.)
 
 A DFA produced from these patterns doesn't necessarily have the same number of
@@ -1446,7 +1657,8 @@ is over two orders of magnitude larger than a single ASCII `\w`. Therefore,
 each DFA state probably has a lot more NFA states in it for the Unicode pattern
 as opposed to the ASCII pattern. It's not clear whether we can do any better
 here (other than trying to minimize the Unicode `\w`, which would be totally
-feasible), since we don't actually know the composition of the search text.
+feasible), since we don't actually know the composition of the search text
+ahead of time.
 
 One idea for improvement is to have multiple types of DFAs. For example,
 you might imagine trying to match with an ASCII only DFA. If the DFA sees a
@@ -1455,3 +1667,250 @@ However, the penalty here is so small that it's hard to justify this kind of
 implementation complexity!
 
 ## Single file benchmarks
+
+In the second half of our benchmarks, we will shift gears and look more closely
+at the performance of search tools on a single large file. Each benchmark will
+be run on two samples of the
+[OpenSubtitles2016](http://opus.lingfil.uu.se/OpenSubtitles2016.php) dataset.
+One sample will be English and therefore predominantly ASCII, and another
+sample will be in Russian and therefore predominantly Cycrillic. The patterns
+for the Russian sample were translated from English using Google Translate.
+(Sadly, I can't read Russian, but I have tried each search by hand and
+confirmed that a sample of the results I was looking at were relevant by piping
+them back through Google Translate.) The English sample is around 1GB and
+the Russian sample is around 1.6GB, so the benchmark timings aren't directly
+comparable.
+
+In this benchmark, the performance of the underlying regex engine and various
+literal optimizations matter a lot more. The two key variables we'll need to
+control for are line counting and Unicode support. Normally, we'd just not
+request line counting from any of the tools, but neither of The Silver Searcher
+or Universal Code Grep support disabling line numbers. Additionally, Unicode
+support is tricky to control for in some examples because `ripgrep` literally
+does not support ASCII only case insensitive searching. It's Unicode all the
+way and there's no way to turn it off. As we'll see, at least for `ripgrep`,
+it's still faster than its ASCII alternatives even when supporting case
+insensitive Unicode support.
+
+As with the Linux benchmark, you can see precisely which command was run and
+its recorded time in
+[the raw data](https://github.com/BurntSushi/ripgrep/blob/master/benchsuite/runs/2016-09-17-ubuntu1604-ec2/raw.csv).
+
+`ripgrep` utterly dominates this round, both in performance *and* correctness.
+
+### `subtitles_literal`
+
+**Description**: TODO.
+
+**English pattern**: `Sherlock Holmes`
+
+{{< high text >}}
+rg             0.268 +/- 0.000 (lines: 629)*+
+pt             3.437 +/- 0.003 (lines: 629)
+sift           0.327 +/- 0.001 (lines: 629)
+grep           0.519 +/- 0.002 (lines: 629)
+rg (lines)     0.595 +/- 0.001 (lines: 629)
+ag (lines)     2.730 +/- 0.001 (lines: 629)
+ucg (lines)    0.776 +/- 0.000 (lines: 629)
+pt (lines)     3.434 +/- 0.001 (lines: 629)
+sift (lines)   0.757 +/- 0.003 (lines: 629)
+grep (lines)   0.971 +/- 0.001 (lines: 629)
+{{< /high >}}
+
+<!--*-->
+
+**Russian pattern**: `Шерлок Холмс`
+
+{{< high text >}}
+rg             0.326 +/- 0.001 (lines: 583)*+
+pt             12.919 +/- 0.012 (lines: 583)
+sift           16.421 +/- 0.015 (lines: 583)
+grep           0.789 +/- 0.003 (lines: 583)
+rg (lines)     0.927 +/- 0.002 (lines: 583)
+ag (lines)     4.481 +/- 0.003 (lines: 583)
+ucg (lines)    1.774 +/- 0.001 (lines: 583)
+pt (lines)     12.939 +/- 0.010 (lines: 583)
+sift (lines)   17.184 +/- 0.007 (lines: 583)
+grep (lines)   1.300 +/- 0.002 (lines: 583)
+{{< /high >}}
+
+<!--*-->
+
+* `*` - Best mean time.
+* `+` - Best sample time.
+* This is the only benchmark that contains `pt` and `sift`, since they become
+  too slow in all future benchmarks.
+
+**Analysis**: TODO.
+
+### `subtitles_literal_casei`
+
+**Description**: TODO.
+
+**English pattern**: `Sherlock Holmes`
+
+{{< high text >}}
+rg                    0.366 +/- 0.001 (lines: 642)*+
+grep                  4.083 +/- 0.005 (lines: 642)
+grep (ASCII)          0.614 +/- 0.001 (lines: 642)
+rg (lines)            0.695 +/- 0.001 (lines: 642)
+ag (lines) (ASCII)    2.772 +/- 0.001 (lines: 642)
+ucg (lines) (ASCII)   0.805 +/- 0.002 (lines: 642)
+{{< /high >}}
+
+<!--*-->
+
+**Russian pattern**: `Шерлок Холмс`
+
+{{< high text >}}
+rg                    1.133 +/- 0.002 (lines: 604)
+grep                  8.190 +/- 0.005 (lines: 604)
+grep (ASCII)          0.784 +/- 0.001 (lines: 583)
+rg (lines)            1.733 +/- 0.001 (lines: 604)
+ag (lines) (ASCII)    0.730 +/- 0.001 (lines: 0)*+
+ucg (lines) (ASCII)   1.775 +/- 0.002 (lines: 583)
+{{< /high >}}
+
+<!--*-->
+
+* `*` - Best mean time.
+* `+` - Best sample time.
+
+**Analysis**: TODO.
+
+### `subtitles_alternate`
+
+**Description**: TODO.
+
+**English pattern**: `Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty`
+
+{{< high text >}}
+rg (lines)     0.620 +/- 0.002 (lines: 848)
+ag (lines)     3.756 +/- 0.000 (lines: 848)
+ucg (lines)    1.447 +/- 0.003 (lines: 848)
+grep (lines)   3.411 +/- 0.002 (lines: 848)
+rg             0.290 +/- 0.000 (lines: 848)*+
+grep           2.955 +/- 0.001 (lines: 848)
+{{< /high >}}
+
+<!--*-->
+
+**Russian pattern**: `Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти`
+
+{{< high text >}}
+rg (lines)     1.903 +/- 0.001 (lines: 691)
+ag (lines)     5.891 +/- 0.001 (lines: 691)
+ucg (lines)    2.754 +/- 0.002 (lines: 691)
+grep (lines)   8.511 +/- 0.004 (lines: 691)
+rg             1.301 +/- 0.002 (lines: 691)*+
+grep           7.984 +/- 0.004 (lines: 691)
+{{< /high >}}
+
+<!--*-->
+
+* `*` - Best mean time.
+* `+` - Best sample time.
+
+**Analysis**: TODO.
+
+### `subtitles_alternate_casei`
+
+**Description**: TODO.
+
+**English pattern**: `Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty`
+
+{{< high text >}}
+ag (ASCII)     5.171 +/- 0.003 (lines: 862)
+ucg (ASCII)    3.417 +/- 0.001 (lines: 862)
+grep (ASCII)   4.529 +/- 0.003 (lines: 862)
+rg             2.722 +/- 0.000 (lines: 862)*+
+grep           5.121 +/- 0.001 (lines: 862)
+{{< /high >}}
+
+<!--*-->
+
+**Russian pattern**: `Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти`
+
+{{< high text >}}
+ag (ASCII)     5.894 +/- 0.007 (lines: 691)
+ucg (ASCII)    2.747 +/- 0.008 (lines: 691)*+
+grep (ASCII)   8.579 +/- 0.017 (lines: 691)
+rg             4.832 +/- 0.002 (lines: 735)
+grep           8.723 +/- 0.001 (lines: 735)
+{{< /high >}}
+
+<!--*-->
+
+* `*` - Best mean time.
+* `+` - Best sample time.
+
+**Analysis**: TODO.
+
+### `subtitles_surrounding_words`
+
+**Description**: TODO.
+
+**English pattern**: `\w+\s+Holmes\s+\w+`
+
+{{< high text >}}
+rg             0.605 +/- 0.000 (lines: 317)
+grep           1.285 +/- 0.001 (lines: 317)
+rg (ASCII)     0.601 +/- 0.000 (lines: 317)*+
+ag (ASCII)     11.665 +/- 0.008 (lines: 323)
+ucg (ASCII)    4.651 +/- 0.001 (lines: 317)
+grep (ASCII)   1.275 +/- 0.001 (lines: 317)
+{{< /high >}}
+
+<!--*-->
+
+**Russian pattern**: `\w+\s+Холмс\s+\w+`
+
+{{< high text >}}
+rg             0.956 +/- 0.000 (lines: 278)*+
+grep           1.662 +/- 0.001 (lines: 278)
+ag (ASCII)     2.410 +/- 0.000 (lines: 0)
+ucg (ASCII)    2.866 +/- 0.001 (lines: 0)
+grep (ASCII)   1.599 +/- 0.002 (lines: 0)
+{{< /high >}}
+
+<!--*-->
+
+* `*` - Best mean time.
+* `+` - Best sample time.
+
+**Analysis**: TODO.
+
+### `subtitles_no_literal`
+
+**Description**: TODO.
+
+**English pattern**: `\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}`
+
+{{< high text >}}
+rg             2.777 +/- 0.005 (lines: 13)
+rg (ASCII)     2.540 +/- 0.000 (lines: 13)*+
+ag (ASCII)     10.073 +/- 0.002 (lines: 48)
+ucg (ASCII)    7.734 +/- 0.002 (lines: 13)
+grep (ASCII)   4.412 +/- 0.002 (lines: 13)
+{{< /high >}}
+
+<!--*-->
+
+**Russian pattern**: `\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}\s+\w{5}`
+
+{{< high text >}}
+rg             4.904 +/- 0.009 (lines: 41)
+rg (ASCII)     3.972 +/- 0.000 (lines: 0)
+ag (ASCII)     2.395 +/- 0.003 (lines: 0)*+
+ucg (ASCII)    2.895 +/- 0.003 (lines: 0)
+grep (ASCII)   2.484 +/- 0.001 (lines: 0)
+{{< /high >}}
+
+<!--*-->
+
+* `*` - Best mean time.
+* `+` - Best sample time.
+* `grep` with Unicode support was dropped from this benchmark because it takes
+  several *minutes* to finish.
+
+**Analysis**: TODO.
