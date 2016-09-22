@@ -27,7 +27,8 @@ several popular code search tools. Specifically, we will dive into a series of
 * Tools that search many files at once are generally *slower* if they use
   memory maps, not faster.
 
-As the author of both `ripgrep` and
+As someone who has worked on text search in Rust in their free time for the
+last 2.5 years, and as the author of both `ripgrep` and
 [the underlying regular expression engine](https://github.com/rust-lang-nursery/regex),
 I will use this opportunity to provide detailed insights into the performance
 of each code search tool. No benchmark will go unscrutinized!
