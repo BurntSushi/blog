@@ -148,7 +148,22 @@ but you'll need to have the
 Tools](http://landinghub.visualstudio.com/visual-cpp-build-tools)
 installed.
 
-If you're a Rust programmer, `ripgrep` can be installed with `cargo`:
+If you're a **Homebrew** user, then you can install it with a custom formula
+(N.B. `ripgrep` isn't actually in Homebrew yet. This just installs the binary
+directly):
+
+{{< high sh >}}
+$ brew install https://raw.githubusercontent.com/BurntSushi/ripgrep/master/pkg/brew/ripgrep.rb
+{{< /high >}}
+
+If you're an **Archlinux** user, then you can install `ripgrep` from the
+[`ripgrep` AUR package](https://aur.archlinux.org/packages/ripgrep/), e.g.,
+
+{{< high sh >}}
+$ yaourt -S ripgrep
+{{< /high >}}
+
+If you're a **Rust programmer**, `ripgrep` can be installed with `cargo`:
 
 {{< high sh >}}
 $ cargo install ripgrep
@@ -173,9 +188,6 @@ acceleration like so, which is used in all benchmarks reported in this article.
 {{< high sh >}}
 RUSTFLAGS="-C target-cpu=native" cargo build --release --features simd-accel
 {{< /high >}}
-
-N.B. `ripgrep` is not yet available in any package repositories. I'd like to
-fix that in the future.
 
 ### Whirlwind tour
 
@@ -1680,7 +1692,7 @@ at the performance of search tools on a single large file. Each benchmark will
 be run on two samples of the
 [OpenSubtitles2016](http://opus.lingfil.uu.se/OpenSubtitles2016.php) dataset.
 One sample will be English and therefore predominantly ASCII, and another
-sample will be in Russian and therefore predominantly Cycrillic. The patterns
+sample will be in Russian and therefore predominantly Cyrillic. The patterns
 for the Russian sample were translated from English using Google Translate.
 (Sadly, I can't read Russian, but I have tried each search by hand and
 confirmed that a sample of the results I was looking at were relevant by piping
@@ -1694,10 +1706,10 @@ control for are line counting and Unicode support. Normally, we'd just not
 request line counting from any of the tools, but neither of The Silver Searcher
 or Universal Code Grep support disabling line numbers. Additionally, Unicode
 support is tricky to control for in some examples because `ripgrep` literally
-does not support ASCII only case insensitive searching. It's Unicode all the
-way and there's no way to turn it off. As we'll see, at least for `ripgrep`,
-it's still faster than its ASCII alternatives even when supporting case
-insensitive Unicode support.
+does not support ASCII only case insensitive semantics when searching with a
+non-ASCII string. It's Unicode all the way and there's no way to turn it
+off. As we'll see, at least for `ripgrep`, it's still faster than its ASCII
+alternatives even when providing case insensitive Unicode support.
 
 As with the Linux benchmark, you can see precisely which command was run and
 its recorded time in
@@ -1714,16 +1726,17 @@ the `-n` flag (or equivalent) so that the output reports line numbers.
 **English pattern**: `Sherlock Holmes`
 
 {{< high text >}}
-rg             0.269 +/- 0.000 (lines: 629)*+
-pt             3.436 +/- 0.001 (lines: 629)
-sift           0.327 +/- 0.002 (lines: 629)
-grep           0.517 +/- 0.001 (lines: 629)
-rg (lines)     0.596 +/- 0.001 (lines: 629)
+rg             0.268 +/- 0.000 (lines: 629)*+
+rg (no mmap)   0.336 +/- 0.001 (lines: 629)
+pt             3.433 +/- 0.002 (lines: 629)
+sift           0.326 +/- 0.002 (lines: 629)
+grep           0.516 +/- 0.001 (lines: 629)
+rg (lines)     0.595 +/- 0.001 (lines: 629)
 ag (lines)     2.730 +/- 0.003 (lines: 629)
-ucg (lines)    0.814 +/- 0.003 (lines: 629)
-pt (lines)     3.438 +/- 0.004 (lines: 629)
-sift (lines)   0.759 +/- 0.003 (lines: 629)
-grep (lines)   0.971 +/- 0.001 (lines: 629)
+ucg (lines)    0.745 +/- 0.001 (lines: 629)
+pt (lines)     3.434 +/- 0.005 (lines: 629)
+sift (lines)   0.756 +/- 0.002 (lines: 629)
+grep (lines)   0.969 +/- 0.001 (lines: 629)
 {{< /high >}}
 
 <!--*-->
@@ -1731,16 +1744,17 @@ grep (lines)   0.971 +/- 0.001 (lines: 629)
 **Russian pattern**: `Шерлок Холмс`
 
 {{< high text >}}
-rg             0.326 +/- 0.001 (lines: 583)*+
-pt             12.922 +/- 0.010 (lines: 583)
-sift           16.424 +/- 0.010 (lines: 583)
-grep           0.786 +/- 0.003 (lines: 583)
-rg (lines)     0.927 +/- 0.002 (lines: 583)
+rg             0.325 +/- 0.001 (lines: 583)*+
+rg (no mmap)   0.452 +/- 0.002 (lines: 583)
+pt             12.917 +/- 0.009 (lines: 583)
+sift           16.418 +/- 0.008 (lines: 583)
+grep           0.780 +/- 0.001 (lines: 583)
+rg (lines)     0.926 +/- 0.001 (lines: 583)
 ag (lines)     4.481 +/- 0.003 (lines: 583)
-ucg (lines)    1.897 +/- 0.009 (lines: 583)
-pt (lines)     12.937 +/- 0.006 (lines: 583)
-sift (lines)   17.178 +/- 0.008 (lines: 583)
-grep (lines)   1.301 +/- 0.005 (lines: 583)
+ucg (lines)    1.889 +/- 0.004 (lines: 583)
+pt (lines)     12.935 +/- 0.011 (lines: 583)
+sift (lines)   17.177 +/- 0.010 (lines: 583)
+grep (lines)   1.300 +/- 0.003 (lines: 583)
 {{< /high >}}
 
 <!--*-->
@@ -1840,6 +1854,18 @@ Therefore, `rg` will prefer bytes other than `\xD0` and `\xD1` for use with
 GNU grep continues to do well on this benchmark mostly because of blind luck:
 Boyer-Moore uses the last byte, which will correspond to `\x81`, which is much
 rarer than `\xD0` or `\xD1`.
+
+Switching gears, we should briefly discuss memory maps. In this benchmark, `rg`
+beats out `rg (no mmap)` by about 25%. The only difference between the two is
+that the former memory maps the file into memory while the latter incrementally
+reads bytes from the file into an intermediate buffer, and searches it. In this
+case, the overhead of the memory map is very small because we only need to
+create one of them. This is the *opposite* result from our Linux benchmark
+above, where memory maps proved to be worse than searching with an intermediate
+buffer since we needed to create a new memory map for every file we searched,
+which ends up incurring quite a bit of overhead. `rg` takes an empirical
+approach here and enables memory map searching when it knows it only needs to
+search a few files, and otherwise searches using an intermediate buffer.
 
 One last note: I've neglected to talk about `(lines)` because there's really
 not much to say here: counting lines takes work, and if you don't need to
@@ -1965,17 +1991,18 @@ that's just a shot in the dark.
 
 ### `subtitles_alternate`
 
-**Description**: TODO.
+**Description**: This benchmarks an alternation of literals, where there are
+several distinct leading bytes from each literal. We control for line counting.
 
 **English pattern**: `Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty`
 
 {{< high text >}}
+rg             0.294 +/- 0.001 (lines: 848)*+
+grep           2.955 +/- 0.003 (lines: 848)
 rg (lines)     0.619 +/- 0.001 (lines: 848)
 ag (lines)     3.757 +/- 0.001 (lines: 848)
 ucg (lines)    1.479 +/- 0.002 (lines: 848)
 grep (lines)   3.412 +/- 0.004 (lines: 848)
-rg             0.294 +/- 0.001 (lines: 848)*+
-grep           2.955 +/- 0.003 (lines: 848)
 {{< /high >}}
 
 <!--*-->
@@ -1983,12 +2010,12 @@ grep           2.955 +/- 0.003 (lines: 848)
 **Russian pattern**: `Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти`
 
 {{< high text >}}
+rg             1.300 +/- 0.002 (lines: 691)*+
+grep           7.994 +/- 0.017 (lines: 691)
 rg (lines)     1.902 +/- 0.002 (lines: 691)
 ag (lines)     5.892 +/- 0.003 (lines: 691)
 ucg (lines)    2.864 +/- 0.006 (lines: 691)
 grep (lines)   8.511 +/- 0.005 (lines: 691)
-rg             1.300 +/- 0.002 (lines: 691)*+
-grep           7.994 +/- 0.017 (lines: 691)
 {{< /high >}}
 
 <!--*-->
@@ -1996,20 +2023,37 @@ grep           7.994 +/- 0.017 (lines: 691)
 * `*` - Best mean time.
 * `+` - Best sample time.
 
-**Analysis**: TODO.
+**Analysis**: `rg` does really well here, on both the English and Russian
+patterns, primarily thanks to Teddy as described in the analysis for
+[`subtitles_literal_casei`](#subtitles-literal-casei). On the English pattern,
+`rg` is around an *order of magnitude* faster than GNU grep.
+
+The performance cost of counting lines is on full display here. For `rg` at
+least, it makes returning search results take twice as long.
+
+Note that the benchmark description mentions picking literals with distinct
+leading bytes. This is to avoid measuring an optimization where the regex
+engine detects the leading byte and runs `memchr` on it. Of course, this
+optimization is important (and `rg` will of course do it), but it's far more
+interesting to benchmark what happens in a slightly trickier case.
 
 ### `subtitles_alternate_casei`
 
-**Description**: TODO.
+**Description**: This benchmark is just like
+[`subtitles_alternate`](#subtitles-alternate),
+except it searches case insensitively. In this benchmark, instead of
+controlling for line counting (all commands count lines), we control for
+Unicode support.
 
 **English pattern**: `Sherlock Holmes|John Watson|Irene Adler|Inspector Lestrade|Professor Moriarty`
+(with the `-i` flag set)
 
 {{< high text >}}
+rg             2.724 +/- 0.002 (lines: 862)*+
+grep           5.125 +/- 0.006 (lines: 862)
 ag (ASCII)     5.170 +/- 0.004 (lines: 862)
 ucg (ASCII)    3.453 +/- 0.005 (lines: 862)
 grep (ASCII)   4.537 +/- 0.025 (lines: 862)
-rg             2.724 +/- 0.002 (lines: 862)*+
-grep           5.125 +/- 0.006 (lines: 862)
 {{< /high >}}
 
 <!--*-->
@@ -2017,11 +2061,11 @@ grep           5.125 +/- 0.006 (lines: 862)
 **Russian pattern**: `Шерлок Холмс|Джон Уотсон|Ирен Адлер|инспектор Лестрейд|профессор Мориарти`
 
 {{< high text >}}
+rg             4.834 +/- 0.004 (lines: 735)
+grep           8.729 +/- 0.004 (lines: 735)
 ag (ASCII)     5.891 +/- 0.001 (lines: 691)
 ucg (ASCII)    2.868 +/- 0.005 (lines: 691)*+
 grep (ASCII)   8.572 +/- 0.009 (lines: 691)
-rg             4.834 +/- 0.004 (lines: 735)
-grep           8.729 +/- 0.004 (lines: 735)
 {{< /high >}}
 
 <!--*-->
@@ -2029,7 +2073,120 @@ grep           8.729 +/- 0.004 (lines: 735)
 * `*` - Best mean time.
 * `+` - Best sample time.
 
-**Analysis**: TODO.
+**Analysis**: While `rg` gets an *order of magnitude* slower on this benchmark
+compared to
+[`subtitles_alternate`](#subtitles-alternate),
+it still comfortably beats out the rest of the search tools, even when other
+tools don't support Unicode. A key thing this benchmark demonstrates are the
+limits of the Teddy algorithm. In fact, `rg` opts to not use Teddy in this
+benchmark because it predicts it won't perform well.
+
+Why doesn't Teddy perform well here? Well, the answer is in how we generate
+literals for this pattern. Namely, `rg` will try to generate all possible
+literals that satisfy Unicode simple case folding rules, and then will take a
+short prefix of that set to cut the number of literals down to reasonable size.
+In this particular case, we wind up with 48 literals:
+
+{{< high text >}}
+INS
+INs
+INſ
+IRE
+IRe
+InS
+Ins
+Inſ
+IrE
+Ire
+JOH
+JOh
+JoH
+Joh
+PRO
+PRo
+PrO
+Pro
+SHE
+SHe
+ShE
+She
+iNS
+iNs
+iNſ
+iRE
+iRe
+inS
+ins
+inſ
+irE
+ire
+jOH
+jOh
+joH
+joh
+pRO
+pRo
+prO
+pro
+sHE
+sHe
+shE
+she
+ſHE
+ſHe
+ſhE
+ſhe
+{{< /high >}}
+
+If we passed all of those to Teddy, it would become overwhelmed. In particular,
+Teddy works by finding candidates for matches very quickly. When there are
+roughly the same number of candidates as there are matches, Teddy performs
+exceedingly well. But, if we give it more literals, then it's more likely to
+find candidates that don't match, and will therefore have to spend a lot more
+time verifying the match, which can be costly.
+
+(A more subtle aspect of the Teddy implementation is that a larger number
+of literals increases the cost of every verification, even if the number of
+candidates produced doesn't increase. As I've mentioned before, if you want the
+full scoop on Teddy, see its
+[well commented
+implementation](https://github.com/rust-lang-nursery/regex/blob/3de8c44f5357d5b582a80b7282480e38e8b7d50d/src/simd_accel/teddy128.rs).
+Going into more detail on Teddy would require a whole blog post on its own!)
+
+When `rg` sees that there are a large number of literals, it could do one of
+two things:
+
+1. Try to cut down the set even more. For example, in this case, we could strip
+   the last character from each prefix off and end up with a much smaller set.
+   Unfortunately, even though we have fewer literals, we wind up with a still
+   not-so-small set of two-character literals, which will also tend to produce
+   a lot more false positive candidates just because of their length.
+2. Move to a different multiple pattern algorithm, such as
+   [Aho-Corasick](https://en.wikipedia.org/wiki/Aho%E2%80%93Corasick_algorithm).
+
+I have tried to implement (1) in the past, but I've always wound up in a game
+of whack-a-mole. I might make one common case faster, but another common case a
+lot slower. In those types of cases, it's usually better to try and achieve
+good average case performance. Luckily for us, Aho-Corasick does *exactly*
+that.
+
+We do still have a few tricks up our sleeve though. For example, many
+Aho-Corasick implementations are built as-if they were
+[tries](https://en.wikipedia.org/wiki/Trie)
+with back-pointers for their failure transitions.
+We can actually do better than that. We can compile all of its failure
+transitions into a DFA with a transition table contiguous in memory. This means
+that every byte of input corresponds to a single lookup in the transition table
+to find the next state. We never have to waste time chasing pointers or walking
+more than one failure transition for any byte in the search text.
+
+Of course, this transition table based approach is memory intensive, since you
+need space for `number_of_literals * number_of_states`, where
+`number_of_states` is roughly capped at the total number of bytes in all of the
+literals. While 48 literals of length 3 is too much for Teddy to handle, it's
+barely a blip when it comes to Aho-Corasick, even with its memory expensive
+transition table based approach. (N.B. In the literature, this particular
+implementation of Aho-Corasick is often called "Advanced" Aho-Corasick.)
 
 ### `subtitles_surrounding_words`
 
