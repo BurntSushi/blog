@@ -2498,14 +2498,14 @@ pt (lines)       15.485 (lines: 5107)
 ucg (lines)       4.843 (lines: 1543)
 {{< /high >}}
 
-**Analysis**: Once again, no other tool comes close to `rg`. At first glance,
-it appears `ucg` competes with `rg` when counting lines (being only slightly
-slower), but in fact, `ucg` reports the wrong number of results! My suspicion
-is that `ucg` gets into trouble when trying to search files over 2GB.
+**Analysis**: At first glance, it appears `ucg` competes with `rg` when
+counting lines (being only slightly slower), but in fact, `ucg` reports the
+wrong number of results! My suspicion is that `ucg` gets into trouble when
+trying to search files over 2GB.
 
 The other intesting bit here is how slow `pt` is, even when not counting lines,
-despite the fact that `sift` is fast. They both uses Go's regexp engine and
-should be able to optimize in the case of a simple literal. It's not clear what
+despite the fact that `sift` is fast. They both use Go's regexp engine and
+should be able to be fast in the case of a simple literal. It's not clear what
 `pt`'s slow down here is. One hypothesis is that even though I'm asking it to
 not count lines, it's still counting them but simply not showing them.
 
