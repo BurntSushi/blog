@@ -1,5 +1,5 @@
 +++
-date = "2016-09-21T08:00:00-04:00"
+date = "2016-09-23T07:05:00-04:00"
 title = "ripgrep is faster than {grep, ag, git grep, ucg, pt, sift}"
 author = "Andrew Gallant"
 url = "ripgrep"
