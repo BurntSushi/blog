@@ -1819,7 +1819,7 @@ why `rg` and `sift` are faster than GNU grep are actually distinct:
   `x86_64` systems, then you'll find that it is using
   [AVX2 instructions and `ymm`
   registers](https://github.com/golang/go/blob/b851ded09a300033849b60ab47a468087ce557a1/src/runtime/asm_amd64.s#L1394-L1413),
-  which permit scanning 64 bytes in each iteration. In contrast, GNU grep uses
+  which permit scanning 32 bytes in each iteration. In contrast, GNU grep uses
   `libc`'s `memchr`, which
   [doesn't use AVX2](https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/x86_64/memrchr.S;h=840de30cd71ba96b3ae43540e6ac255c28906cc5;hb=HEAD).
   However, that C code will be autovectorized to use `xmm` registers and SIMD
