@@ -40,6 +40,12 @@ of each code search tool. No benchmark will go unscrutinized!
 **Target audience**: Some familiarity with Unicode, programming and some
 experience with working on the command line.
 
+**NOTE**: I'm hearing reports from some people that `rg` isn't as fast as I've
+claimed on their data. I'd love to help explain what's going on, but to do
+that, I'll need to be able to reproduce your results. If you
+[file an issue](https://github.com/BurntSushi/ripgrep/issues)
+with something I can reproduce, I'd be happy to try and explain it.
+
 <!--more-->
 
 ## Screenshot of search results
