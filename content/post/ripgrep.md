@@ -176,10 +176,10 @@ $ brew install https://raw.githubusercontent.com/BurntSushi/ripgrep/master/pkg/b
 {{< /high >}}
 
 If you're an **Archlinux** user, then you can install `ripgrep` from the
-[`ripgrep` AUR package](https://aur.archlinux.org/packages/ripgrep/), e.g.,
+official repos:
 
 {{< high sh >}}
-$ yaourt -S ripgrep
+$ pacman -Syu ripgrep
 {{< /high >}}
 
 If you're a **Rust programmer**, `ripgrep` can be installed with `cargo`:
@@ -307,7 +307,7 @@ To see a list of types supported, run `rg --type-list`. To add a new type, use
 `--type-add`:
 
 {{< high sh >}}
-$ rg --type-add 'foo:*.foo,*.foobar'
+$ rg --type-add 'foo:*.{foo,foobar}'
 {{< /high >}}
 
 The type `foo` will now match any file ending with the `.foo` or `.foobar`
