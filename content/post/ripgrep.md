@@ -304,10 +304,11 @@ $ rg -Tjs foobar
 {{< /high >}}
 
 To see a list of types supported, run `rg --type-list`. To add a new type, use
-`--type-add`:
+`--type-add`, which must be accompanied by a pattern for searching (`rg` won't
+persist your type settings):
 
 {{< high sh >}}
-$ rg --type-add 'foo:*.{foo,foobar}'
+$ rg --type-add 'foo:*.{foo,foobar}' -tfoo bar
 {{< /high >}}
 
 The type `foo` will now match any file ending with the `.foo` or `.foobar`
