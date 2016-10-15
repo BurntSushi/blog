@@ -31,7 +31,7 @@ because of their population density.
 
 ### Contact
 
-I currently live with my fiance, Kaitlyn Brady, in Westborough, MA.
+I currently live with my wife, Kaitlyn Brady, in Westborough, MA.
 
 If you wish to contact me, you may email me:
 ![Andrew Gallant's email address](/images/gmail.png)
