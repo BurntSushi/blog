@@ -145,8 +145,6 @@ is far more revealing than reasons why I think you *should* use `ripgrep`.
   UTF-16), then `ripgrep` won't work. `ripgrep` will still work on ASCII
   compatible encodings like latin1 or otherwise partially valid UTF-8.
   `ripgrep` may grow support for additional text encodings over time.
-* `ripgrep` doesn't yet support searching for patterns/literals from a file,
-  but this is easy to add and should change soon.
 * If you need to search compressed files. `ripgrep` doesn't try to do any
   decompression before searching.
 
