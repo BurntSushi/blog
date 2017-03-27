@@ -125,6 +125,10 @@ Why should you use `ripgrep` over any other search tool? Well...
   of search results, searching multiple patterns, highlighting matches with
   color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast while
   supporting Unicode (which is always on).
+* `ripgrep` supports searching files in text encodings other than UTF-8, such
+  as UTF-16, latin-1, GBK, EUC-JP, Shift_JIS and more. (Some support for
+  automatically detecting UTF-16 is provided. Other text encodings must be
+  specifically specified with the `-E/--encoding` flag.)
 
 In other words, use `ripgrep` if you like speed, saner defaults, fewer bugs and
 Unicode.
@@ -141,14 +145,11 @@ is far more revealing than reasons why I think you *should* use `ripgrep`.
   begin/end assertions (e.g., `^\w+$`), word boundaries (e.g., `\bfoo\b`), and
   support for Unicode categories (e.g., `\p{Sc}` to match currency symbols or
   `\p{Lu}` to match any uppercase letter).
-* If you need to search files with text encodings other than UTF-8 (like
-  UTF-16), then `ripgrep` won't work. `ripgrep` will still work on ASCII
-  compatible encodings like latin1 or otherwise partially valid UTF-8.
-  `ripgrep` may grow support for additional text encodings over time.
 * If you need to search compressed files. `ripgrep` doesn't try to do any
   decompression before searching.
+* `ripgrep` doesn't yet have multiline search.
 
-In other words, if you like fancy regexes, non-UTF-8 character encodings or
+In other words, if you like fancy regexes, multiline search or
 decompressing and searching on-the-fly, then `ripgrep` may not quite meet your
 needs (yet).
 
