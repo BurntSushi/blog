@@ -2137,7 +2137,7 @@ Now compile and run this program:
 
 {{< high text >}}
 $ cargo build --release
-$ ./target/release/csvtutor < worldcitiespop.csv
+$ time ./target/release/csvtutor < worldcitiespop.csv
 2176
 
 real    0m1.381s
@@ -2190,7 +2190,7 @@ Compile and run:
 
 {{< high text >}}
 $ cargo build --release
-$ ./target/release/csvtutor < worldcitiespop.csv
+$ time ./target/release/csvtutor < worldcitiespop.csv
 2176
 
 real    0m1.055s
@@ -2259,7 +2259,7 @@ Compile and run:
 
 {{< high text >}}
 $ cargo build --release
-$ ./target/release/csvtutor < worldcitiespop.csv
+$ time ./target/release/csvtutor < worldcitiespop.csv
 2176
 
 real    0m0.873s
