@@ -24,7 +24,7 @@ cheeseburgers, steak, pizza and buffalo chicken.
 
 I occasionally allow myself to get sucked into pointless debates online.
 
-I currently live with my wife, Kaitlyn Brady, in Marlborough, MA.
+I live with my wife, Kaitlyn Brady, in Marlborough, MA.
 
 ### Contact
 
