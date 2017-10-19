@@ -166,12 +166,10 @@ but you'll need to have the
 Tools](http://landinghub.visualstudio.com/visual-cpp-build-tools)
 installed.
 
-If you're a **Homebrew** user, then you can install it with a custom formula
-(N.B. `ripgrep` isn't actually in Homebrew yet. This just installs the binary
-directly):
+If you're a **Homebrew** user, then you can install it like so:
 
 {{< high sh >}}
-$ brew install https://raw.githubusercontent.com/BurntSushi/ripgrep/master/pkg/brew/ripgrep.rb
+$ brew install ripgrep
 {{< /high >}}
 
 If you're an **Archlinux** user, then you can install `ripgrep` from the
