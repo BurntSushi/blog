@@ -635,7 +635,7 @@ StringRecord(["Oakman", "AL", "", "33.7133333", "-87.3886111"])
 {{< /high >}}
 
 If you ever need to access the header record directly, then you can use the
-[`Reader::header`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.Reader.html#method.headers)
+[`Reader::headers`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.Reader.html#method.headers)
 method like so:
 
 {{< high rust >}}
@@ -1330,7 +1330,7 @@ when to quote fields that contain special CSV characters (like commas or new
 lines) or escape literal quotes that appear in your data. The CSV writer can
 also be easily configured to use different delimiters or quoting strategies.
 
-In this section, we'll take a look a look at how to tweak some of the settings
+In this section, we'll take a look at how to tweak some of the settings
 on a CSV writer. In particular, we'll write TSV ("tab separated values")
 instead of CSV, and we'll ask the CSV writer to quote all non-numeric fields.
 Here's an example:
