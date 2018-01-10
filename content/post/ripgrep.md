@@ -737,10 +737,11 @@ what tools are we benchmarking?
   searching everything (unlike every other tool in this list except for
   `grep`).
 
-Notably absent from this list is `ack`. We don't benchmark it here because it
-is outrageously slow. Even on the simplest benchmark (a literal in the Linux
-kernel repository), `ack` is around **two** orders of magnitude slower than
-`ripgrep`. It's just not worth it.
+Notably absent from this list is `ack`. I chose not to benchmark it because,
+at the time of writing, `ack` was much slower than the other tools in this
+list. However, [ack 3 is now in beta](https://beyondgrep.com/ack3/) and
+includes some performance improvements, sometimes decreasing search times by
+half.
 
 ### Benchmark runner
 
