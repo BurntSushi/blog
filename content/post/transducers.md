@@ -1422,7 +1422,7 @@ Levenshtein automaton must have *UTF-8 decoding built into it*. The
 implementation I wrote is based on a trick employed by Russ Cox for
 [RE2](https://github.com/google/re2) (who, in turn, got it from Ken
 Thompson's `grep`). You can read more about it in the documentation of the
-[`utf8-ranges`](http://burntsushi.net/rustdoc/utf8_ranges/) crate.
+[`utf8-ranges`](http://burntsushi.net/rustdoc/utf8-ranges/) crate.
 
 A really cool property that falls out of this approach is that if you execute a
 Levenshtein query using this crate, than all keys are guaranteed to be valid
@@ -1542,10 +1542,10 @@ use fst::set;
 
 // Create 5 sets. As a convenience, these are stored in memory, but they could
 // just as easily have been memory mapped from disk using `Set::from_path`.
-let set1 = try!(Set::from_iter(&["AC/DC", "Aerosmith"]));
-let set2 = try!(Set::from_iter(&["Bob Seger", "Bruce Springsteen"]));
+let set1 = try!(Set::from_iter(&["Bob Seger", "Bruce Springsteen"]));
+let set2 = try!(Set::from_iter(&["Kansas"]));
 let set3 = try!(Set::from_iter(&["George Thorogood", "Golden Earring"]));
-let set4 = try!(Set::from_iter(&["Kansas"]));
+let set4 = try!(Set::from_iter(&["AC/DC", "Aerosmith"]));
 let set5 = try!(Set::from_iter(&["Metallica"]));
 
 // Build a set operation. All we need to do is add a stream from each set and
@@ -1599,10 +1599,10 @@ use fst::set;
 
 // Create 5 sets. As a convenience, these are stored in memory, but they could
 // just as easily have been memory mapped from disk using `Set::from_path`.
-let set1 = try!(Set::from_iter(&["AC/DC", "Aerosmith"]));
-let set2 = try!(Set::from_iter(&["Bob Seger", "Bruce Springsteen"]));
+let set1 = try!(Set::from_iter(&["Bob Seger", "Bruce Springsteen"]));
+let set2 = try!(Set::from_iter(&["Kansas"]));
 let set3 = try!(Set::from_iter(&["George Thorogood", "Golden Earring"]));
-let set4 = try!(Set::from_iter(&["Kansas"]));
+let set4 = try!(Set::from_iter(&["AC/DC", "Aerosmith"]));
 let set5 = try!(Set::from_iter(&["Metallica"]));
 
 // Build our regular expression query.
@@ -1906,7 +1906,7 @@ sep
 Passing the `--outputs` flag shows the values too:
 
 {{< high sh >}}
-$ fst range months.fst
+$ fst range --outputs months.fst
 apr,4
 aug,8
 dec,12
