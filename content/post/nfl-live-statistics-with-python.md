@@ -35,7 +35,7 @@ longer being played. The next time statistics for that game are queried, the
 data will be read from disk. (nflgame comes preloaded with data from every game
 in the pre- and regular season since 2009.)
 
-The [API](http://burntsushi.net/doc/nflgame/) for nflgame is small and
+The [API](https://burntsushi.net/doc/nflgame/) for nflgame is small and
 hopefully easy to use&mdash;even for those without much or any experience
 programming.
 

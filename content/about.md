@@ -34,7 +34,7 @@ If you wish to contact me, you may email me:
 ### PGP public key
 
 The key is pasted below, or it can be downloaded from
-[http://burntsushi.net/stuff/andrewgallant.asc](http://burntsushi.net/stuff/andrewgallant.asc).
+[https://burntsushi.net/stuff/andrewgallant.asc](https://burntsushi.net/stuff/andrewgallant.asc).
 
 {{< high text >}}
 -----BEGIN PGP PUBLIC KEY BLOCK-----

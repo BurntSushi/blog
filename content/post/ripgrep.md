@@ -50,7 +50,7 @@ with something I can reproduce, I'd be happy to try and explain it.
 
 ## Screenshot of search results
 
-[![A screenshot of a sample search with ripgrep](http://burntsushi.net/stuff/ripgrep1.png)](http://burntsushi.net/stuff/ripgrep1.png)
+[![A screenshot of a sample search with ripgrep](https://burntsushi.net/stuff/ripgrep1.png)](https://burntsushi.net/stuff/ripgrep1.png)
 
 ## Table of Contents
 
@@ -386,7 +386,7 @@ to track down these types of performance problems because they
 tend to be buried in a standard library somewhere. [Python only
 recently fixed this](http://benhoyt.com/writings/scandir/), for
 example. Rest assured that [`ripgrep` uses a recursive directory
-iterator](http://burntsushi.net/rustdoc/walkdir/) that makes the minimum number
+iterator](https://burntsushi.net/rustdoc/walkdir/) that makes the minimum number
 of system calls possible.
 
 Filtering file paths requires not only respecting rules given at the command
@@ -1370,7 +1370,7 @@ its finite state machine*. (This is a trick that is originally attributed to
 Ken Thompson, but was more carefully
 [described by Russ Cox](https://swtch.com/~rsc/regexp/regexp3.html).
 To read more about how this is achieved in Rust's regex engine, please see the
-[`utf8-ranges`](http://burntsushi.net/rustdoc/utf8_ranges/)
+[`utf8-ranges`](https://burntsushi.net/rustdoc/utf8_ranges/)
 library.) The reason why this is fast is because there is no extra decoding
 step required. The regex can be matched directly against UTF-8 encoded byte
 strings one byte at a time. Invalid UTF-8 doesn't pose any problems: the finite

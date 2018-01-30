@@ -3,7 +3,7 @@ all:
 
 deploy:
 	hugo
-	rscp public/ gopher:/home/andrew/www/burntsushi.net/blog
+	rscp public/ bs:/home/ubuntu/www/burntsushi.net/blog
 
 clean:
 	rm -rf tmp

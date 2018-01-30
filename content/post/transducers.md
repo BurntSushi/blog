@@ -17,7 +17,7 @@ structure* for representing ordered sets and maps. This includes introducing
 an implementation written in Rust called the
 [`fst` crate](https://github.com/BurntSushi/fst).
 It comes with
-[complete API documentation](http://burntsushi.net/rustdoc/fst/).
+[complete API documentation](https://burntsushi.net/rustdoc/fst/).
 I will also show you how to build them using a simple command line tool.
 Finally, I will discuss a few experiments culminating in indexing over
 1,600,000,000 URLs (134 GB) from the
@@ -841,7 +841,7 @@ most out of this section, I'd recommend reading the excellent
 book.
 
 Additionally, you may also find it useful to keep the
-[`fst` API documentation](http://burntsushi.net/rustdoc/fst/index.html)
+[`fst` API documentation](https://burntsushi.net/rustdoc/fst/index.html)
 handy, which may act as a nice supplement to the material in this section.
 
 ### Building ordered sets and maps
@@ -971,9 +971,9 @@ let map = Map::from_bytes(fst_bytes).unwrap();
 
 This is pretty much all there is to building ordered sets or maps represented
 by FSTs. There is API documentation for both
-[sets](http://burntsushi.net/rustdoc/fst/struct.SetBuilder.html)
+[sets](https://burntsushi.net/rustdoc/fst/struct.SetBuilder.html)
 and
-[maps](http://burntsushi.net/rustdoc/fst/struct.MapBuilder.html).
+[maps](https://burntsushi.net/rustdoc/fst/struct.MapBuilder.html).
 
 #### A builder shortcut
 
@@ -1095,7 +1095,7 @@ let` here instead of a `for` loop or an iterator adapter, then it is time to
 let you in on a dirty little secret: the `fst` crate doesn't expose iterators.
 Instead, it exposes *streams*. The technical justification is explained at
 length on the [documentation for the `Streamer`
-trait](http://burntsushi.net/rustdoc/fst/trait.Streamer.html).)
+trait](https://burntsushi.net/rustdoc/fst/trait.Streamer.html).)
 
 In this example, we're asking the set for a stream, which lets us iterate over
 all of the keys in the set in order. The stream yields a *reference* to an
@@ -1422,7 +1422,7 @@ Levenshtein automaton must have *UTF-8 decoding built into it*. The
 implementation I wrote is based on a trick employed by Russ Cox for
 [RE2](https://github.com/google/re2) (who, in turn, got it from Ken
 Thompson's `grep`). You can read more about it in the documentation of the
-[`utf8-ranges`](http://burntsushi.net/rustdoc/utf8_ranges/) crate.
+[`utf8-ranges`](https://burntsushi.net/rustdoc/utf8_ranges/) crate.
 
 A really cool property that falls out of this approach is that if you execute a
 Levenshtein query using this crate, than all keys are guaranteed to be valid
@@ -1642,7 +1642,7 @@ also include the values associated with each key. In particular, for a union
 operation, each key emitted in the stream may have occurred in more than one of
 the maps given. I will defer to
 [`fst`'s API documentation for a map
-union](http://burntsushi.net/rustdoc/fst/map/struct.OpBuilder.html#method.union),
+union](https://burntsushi.net/rustdoc/fst/map/struct.OpBuilder.html#method.union),
 which contains an example.
 
 ### Raw transducers
@@ -1776,7 +1776,7 @@ fn contains_key(fst: &Fst, key: &[u8]) -> bool {
 
 And that's pretty much all there is to it. The
 [`Node` type has a few more useful
-documented methods](http://burntsushi.net/rustdoc/fst/raw/struct.Node.html)
+documented methods](https://burntsushi.net/rustdoc/fst/raw/struct.Node.html)
 that you may want to peruse.
 
 ## The FST command line tool
@@ -2487,7 +2487,7 @@ We also briefly covered an efficient implementation of the ideas in this
 article. This implementation is provided as part of the
 [`fst`](https://github.com/BurntSushi/fst) crate written in Rust.
 It comes with complete
-[API documentation and examples](http://burntsushi.net/rustdoc/fst/).
+[API documentation and examples](https://burntsushi.net/rustdoc/fst/).
 
 Finally, you may be interested in other work I've done in Rust with strings:
 

@@ -1540,7 +1540,7 @@ of an error (because it requires impls for both `fmt::Debug` and
 Beyond that, it can also be useful to provide implementations of `From` on your
 error types. This allows you (the library author) and your users to
 [compose more detailed errors](#composing-custom-error-types). For example,
-[`csv::Error`](http://burntsushi.net/rustdoc/csv/enum.Error.html)
+[`csv::Error`](https://burntsushi.net/rustdoc/csv/enum.Error.html)
 provides `From` impls for both `io::Error` and `byteorder::Error`.
 
 Finally, depending on your tastes, you may also want to define a
@@ -1566,9 +1566,9 @@ that can go wrong!
 The data we'll be using comes from the
 [Data Science Toolkit](https://github.com/petewarden/dstkdata). I've prepared
 some data from it for this exercise. You can either grab the
-[world population data](http://burntsushi.net/stuff/worldcitiespop.csv.gz)
+[world population data](https://burntsushi.net/stuff/worldcitiespop.csv.gz)
 (41MB gzip compressed, 145MB uncompressed) or just the
-[US population data](http://burntsushi.net/stuff/uscitiespop.csv.gz)
+[US population data](https://burntsushi.net/stuff/uscitiespop.csv.gz)
 (2.2MB gzip compressed, 7.2MB uncompressed).
 
 Up until now, I've kept the code limited to Rust's standard library. For a real
@@ -1638,7 +1638,7 @@ cargo build --release
 Let's get argument parsing out of the way. I won't go into too much detail on
 Docopt, but there is a
 [nice web page](http://docopt.org/) describing it and
-[documentation for the Rust crate](http://burntsushi.net/rustdoc/docopt/).
+[documentation for the Rust crate](https://burntsushi.net/rustdoc/docopt/).
 The short story is that Docopt generates an argument parser *from the usage
 string*. Once the parsing is done, we can decode the program arguments into a
 Rust struct. Here's our program with the appropriate `extern crate` statements,
@@ -1669,11 +1669,11 @@ fn main() {
 
 Okay, time to get coding. The
 [docs for
-Docopt](http://burntsushi.net/rustdoc/docopt/struct.Docopt.html#method.new)
+Docopt](https://burntsushi.net/rustdoc/docopt/struct.Docopt.html#method.new)
 say we can create a new parser with `Docopt::new` and then decode the current
 program arguments into a struct with `Docopt::decode`. The catch is that both
 of these functions can return a
-[`docopt::Error`](http://burntsushi.net/rustdoc/docopt/enum.Error.html).
+[`docopt::Error`](https://burntsushi.net/rustdoc/docopt/enum.Error.html).
 We can start with explicit case analysis:
 
 {{< high "rust" >}}
@@ -1731,9 +1731,9 @@ let args: Args = match Docopt::new(USAGE) {
 {{< /high >}}
 
 Thankfully, the
-[`docopt::Error`](http://burntsushi.net/rustdoc/docopt/enum.Error.html)
+[`docopt::Error`](https://burntsushi.net/rustdoc/docopt/enum.Error.html)
 type defines a convenient method
-[`exit`](http://burntsushi.net/rustdoc/docopt/enum.Error.html#method.exit),
+[`exit`](https://burntsushi.net/rustdoc/docopt/enum.Error.html#method.exit),
 which effectively does what we just did. Combine that with our knowledge of
 combinators, and we have concise, easy to read code:
 
@@ -1804,13 +1804,13 @@ Let's outline the errors. We can start with the obvious: the three places that
 1. [`fs::File::open`](http://doc.rust-lang.org/std/fs/struct.File.html#method.open)
    can return an
    [`io::Error`](http://doc.rust-lang.org/std/io/struct.Error.html).
-2. [`csv::Reader::decode`](http://burntsushi.net/rustdoc/csv/struct.Reader.html#method.decode)
+2. [`csv::Reader::decode`](https://burntsushi.net/rustdoc/csv/struct.Reader.html#method.decode)
    decodes one record at a time, and
    [decoding a
-   record](http://burntsushi.net/rustdoc/csv/struct.DecodedRecords.html)
+   record](https://burntsushi.net/rustdoc/csv/struct.DecodedRecords.html)
    (look at the `Item` associated type on the `Iterator` impl)
    can produce a
-   [`csv::Error`](http://burntsushi.net/rustdoc/csv/enum.Error.html).
+   [`csv::Error`](https://burntsushi.net/rustdoc/csv/enum.Error.html).
 3. If `row.population` is `None`, then calling `expect` will panic.
 
 Are there any others? What if we can't find a matching city? Tools like `grep`
@@ -1994,7 +1994,7 @@ string, and make the corresponding struct member `arg_data_path` optional. The
 Modifying `search` is slightly trickier. The `csv` crate can build a parser out
 of
 [any type that implements
-`io::Read`](http://burntsushi.net/rustdoc/csv/struct.Reader.html#method.from_reader).
+`io::Read`](https://burntsushi.net/rustdoc/csv/struct.Reader.html#method.from_reader).
 But how can we use the same code over both types? There's actually a couple
 ways we could go about this. One way is to write `search` such that it is
 generic on some type parameter `R` that satisfies `io::Read`. Another way is to

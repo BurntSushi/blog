@@ -1866,7 +1866,7 @@ such a dataset, we'll use the original source of `uspop.csv`. **Warning: the
 download is 41MB compressed and decompresses to 145MB.**
 
 {{< high text >}}
-$ curl -LO http://burntsushi.net/stuff/worldcitiespop.csv.gz
+$ curl -LO https://burntsushi.net/stuff/worldcitiespop.csv.gz
 $ gunzip worldcitiespop.csv.gz
 $ wc worldcitiespop.csv
   3173959   5681543 151492068 worldcitiespop.csv
