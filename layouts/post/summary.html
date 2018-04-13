@@ -1,9 +1,9 @@
 <div class="post">
-  <p class="post-meta left">{{ .Date.Format "Jan 2, 2006" }}</p>
-  <div class="clearfix"></div>
   <h2 class="post-title"><a class="post-link" href="{{ .Permalink }}">
     {{ .Title }} {{ if .Draft }}(draft){{end}}
   </a></h2>
+  <p class="post-meta left">{{ .Date.Format "Jan 2, 2006" }}</p>
+  <div class="clearfix"></div>
   <p class="post-summary">{{ .Summary }}</p>
   <p><a href="{{ .Permalink }}">Read more...</a></p>
 </div>

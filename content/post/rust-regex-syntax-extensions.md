@@ -6,6 +6,10 @@ author = "Andrew Gallant"
 url = "rust-regex-syntax-extensions"
 +++
 
+**WARNING:** <em>2018-04-12</em>: The code snippets for this post are no longer
+available. This is just as well anyway, since they all depended on an unstable
+internal compiler interface, which hasn't existed for years.
+
 A few weeks ago, I set out to add regular expressions to the
 [Rust](http://www.rust-lang.org/)
 distribution with an implementation and feature set heavily inspired by

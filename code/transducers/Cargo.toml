@@ -1,9 +1,7 @@
-
 [package]
 name = "transducers"
 version = "0.1.0"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 
 [dependencies]
-fst = { version = "0.1", path = "/home/andrew/rust/fst" }
-
+fst = "0.1"

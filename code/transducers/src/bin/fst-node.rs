@@ -16,8 +16,8 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   // Get the root node of this FST.
   let root = fst.root();
   
-  // Print the transitions out of the root node.
-  // outputs "b" followed by "f"
+  // Print the transitions out of the root node in lexicographic order.
+  // Outputs "b" followed by "f."
   for transition in root.transitions() {
       println!("{}", transition.inp as char);
   }
