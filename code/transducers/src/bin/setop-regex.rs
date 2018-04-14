@@ -1,13 +1,16 @@
 #![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
+extern crate fst_levenshtein;
+extern crate fst_regex;
 
 use std::error::Error;
 
 fn main2() -> Result<(), Box<Error+Send+Sync>> {
     use std::str::from_utf8;
   
-  use fst::{Streamer, Regex, Set};
+  use fst::{Streamer, Set};
   use fst::set;
+  use fst_regex::Regex;
   
   // Create 5 sets. As a convenience, these are stored in memory, but they could
   // just as easily have been memory mapped from disk using `Set::from_path`.

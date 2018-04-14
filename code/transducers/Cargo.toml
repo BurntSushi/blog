@@ -4,4 +4,6 @@ version = "0.1.0"
 authors = ["Andrew Gallant <jamslam@gmail.com>"]
 
 [dependencies]
-fst = "0.1"
+fst = "0.3"
+fst-levenshtein = "0.2"
+fst-regex = "0.2"

@@ -1256,9 +1256,10 @@ The `fst` crate supports using memory maps (but does not yet use `mlock` or
 {{< code-rust "read-set-file" >}}
 use fst::Set;
 
-// Construct the set from a file path.
-// The fst crate implements this using a memory map.
-let set = Set::from_path("set.fst")?;
+// Construct the set from a file path. The fst crate implements this using a
+// memory map, which is why this method is unsafe to call. Callers must ensure
+// that they do not open another mutable memory map in the same program.
+let set = unsafe { Set::from_path("set.fst")? };
 
 // Finally, we can query. This can happen immediately, without having
 // to read the entire set into memory.
@@ -1331,7 +1332,8 @@ Here is a quick example that demonstrates a fuzzy search on an ordered set.
 {{< code-rust "levenshtein" >}}
 // We've seen all these imports before except for Levenshtein.
 // Levenshtein is a type that knows how to build Levenshtein automata.
-use fst::{IntoStreamer, Streamer, Levenshtein, Set};
+use fst::{IntoStreamer, Streamer, Set};
+use fst_levenshtein::Levenshtein;
 
 let keys = vec!["fa", "fo", "fob", "focus", "foo", "food", "foul"];
 let set = Set::from_iter(keys)?;
@@ -1457,7 +1459,8 @@ Here's a simple example:
 {{< code-rust "regex" >}}
 // We've seen all these imports before except for Regex.
 // Regex is a type that knows how to build regular expression automata.
-use fst::{IntoStreamer, Streamer, Regex, Set};
+use fst::{IntoStreamer, Streamer, Set};
+use fst_regex::Regex;
 
 let keys = vec!["123", "food", "xyz123", "τροφή", "еда", "מזון", "☃☃☃"];
 let set = Set::from_iter(keys)?;
@@ -1594,8 +1597,9 @@ matches keys with at least one space in them:
 {{< code-rust "setop-regex" >}}
 use std::str::from_utf8;
 
-use fst::{Streamer, Regex, Set};
+use fst::{Streamer, Set};
 use fst::set;
+use fst_regex::Regex;
 
 // Create 5 sets. As a convenience, these are stored in memory, but they could
 // just as easily have been memory mapped from disk using `Set::from_path`.

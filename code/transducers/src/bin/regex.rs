@@ -1,12 +1,15 @@
 #![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
+extern crate fst_levenshtein;
+extern crate fst_regex;
 
 use std::error::Error;
 
 fn main2() -> Result<(), Box<Error+Send+Sync>> {
     // We've seen all these imports before except for Regex.
   // Regex is a type that knows how to build regular expression automata.
-  use fst::{IntoStreamer, Streamer, Regex, Set};
+  use fst::{IntoStreamer, Streamer, Set};
+  use fst_regex::Regex;
   
   let keys = vec!["123", "food", "xyz123", "τροφή", "еда", "מזון", "☃☃☃"];
   let set = Set::from_iter(keys)?;

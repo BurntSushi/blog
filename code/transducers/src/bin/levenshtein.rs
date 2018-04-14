@@ -1,12 +1,15 @@
 #![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
+extern crate fst_levenshtein;
+extern crate fst_regex;
 
 use std::error::Error;
 
 fn main2() -> Result<(), Box<Error+Send+Sync>> {
     // We've seen all these imports before except for Levenshtein.
   // Levenshtein is a type that knows how to build Levenshtein automata.
-  use fst::{IntoStreamer, Streamer, Levenshtein, Set};
+  use fst::{IntoStreamer, Streamer, Set};
+  use fst_levenshtein::Levenshtein;
   
   let keys = vec!["fa", "fo", "fob", "focus", "foo", "food", "foul"];
   let set = Set::from_iter(keys)?;
