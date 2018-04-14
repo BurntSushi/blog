@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 from __future__ import absolute_import, division, print_function
 
@@ -42,7 +42,7 @@ fn main() {
 }
 ''' % code.strip()
     code = '''
-#![allow(dead_code, unused_imports, unused_variables)]
+#![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
 ''' + code
     return code.strip()
@@ -53,8 +53,11 @@ if __name__ == '__main__':
     p.add_argument('post')
     args = p.parse_args()
 
+    # It's easier to just not try to compile some things.
+    ignore = {'questionmark-def'}
+
     post_name = path.splitext(path.basename(args.post))[0]
-    post = open(args.post).read().decode('utf-8')
+    post = open(args.post).read()
     code_dir = path.join('code', post_name)
     src_bin_dir = path.join(code_dir, 'src', 'bin')
 
@@ -69,9 +72,11 @@ if __name__ == '__main__':
         print(CARGO_TOML.format(post_name=post_name),
               file=open(path.join(code_dir, 'Cargo.toml'), 'w+'))
 
-    samples = defaultdict(unicode)
+    samples = defaultdict(str)
     for m in RE_RUST_CODE.finditer(post):
+        if m.group('name') in ignore:
+            continue
         samples[m.group('name')] += m.group('code')
-    for name, code in samples.iteritems():
+    for name, code in samples.items():
         src_path = path.join(code_dir, 'src', 'bin', u'%s.rs' % name)
-        print(tweak_code(code).encode('utf-8'), file=open(src_path, 'w+'))
+        print(tweak_code(code), file=open(src_path, 'w+'))
