@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+#![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
 
 use std::error::Error;
@@ -18,10 +18,10 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   }
   
   fn file_double_verbose<P: AsRef<Path>>(file_path: P) -> Result<i32, CliError> {
-      let mut file = try!(File::open(file_path).map_err(CliError::Io));
+      let mut file = File::open(file_path).map_err(CliError::Io)?;
       let mut contents = String::new();
-      try!(file.read_to_string(&mut contents).map_err(CliError::Io));
-      let n: i32 = try!(contents.trim().parse().map_err(CliError::Parse));
+      file.read_to_string(&mut contents).map_err(CliError::Io)?;
+      let n: i32 = contents.trim().parse().map_err(CliError::Parse)?;
       Ok(2 * n)
   }
   
@@ -38,10 +38,10 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   }
   
   fn file_double<P: AsRef<Path>>(file_path: P) -> Result<i32, CliError> {
-      let mut file = try!(File::open(file_path));
+      let mut file = File::open(file_path)?;
       let mut contents = String::new();
-      try!(file.read_to_string(&mut contents));
-      let n: i32 = try!(contents.trim().parse());
+      file.read_to_string(&mut contents)?;
+      let n: i32 = contents.trim().parse()?;
       Ok(2 * n)
   }
     Ok(())

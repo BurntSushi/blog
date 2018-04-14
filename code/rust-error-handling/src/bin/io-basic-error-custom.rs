@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+#![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
 
 use std::io;
@@ -17,10 +17,10 @@ use std::io::Read;
 use std::path::Path;
 
 fn file_double<P: AsRef<Path>>(file_path: P) -> Result<i32, CliError> {
-    let mut file = try!(File::open(file_path).map_err(CliError::Io));
+    let mut file = File::open(file_path).map_err(CliError::Io)?;
     let mut contents = String::new();
-    try!(file.read_to_string(&mut contents).map_err(CliError::Io));
-    let n: i32 = try!(contents.trim().parse().map_err(CliError::Parse));
+    file.read_to_string(&mut contents).map_err(CliError::Io)?;
+    let n: i32 = contents.trim().parse().map_err(CliError::Parse)?;
     Ok(2 * n)
 }
 

@@ -8,8 +8,6 @@ url = "rust-error-handling"
 plainIdAnchors = true
 +++
 
-**NOTE**: [This blog post has been merged into the Rust Book.](https://doc.rust-lang.org/stable/book/error-handling.html)
-
 Like most programming languages, Rust encourages the programmer to handle
 errors in a particular way. Generally speaking, error handling is divided into
 two broad categories: exceptions and return values. Rust opts for return
@@ -27,6 +25,9 @@ standard library to make error handling concise and ergonomic.
 **Target audience**: Those new to Rust that don't know its error handling
 idioms yet. Some familiarity with Rust is helpful. (This article makes heavy
 use of some standard traits and some very light use of closures and macros.)
+
+**Update (2018/04/14)**: Examples were converted to `?`, and some text was
+added to give historical context on the change.
 
 <!--more-->
 
@@ -105,12 +106,12 @@ systems may want to jump around. Here's my very brief guide:
     * [Composing `Option` and `Result`](#composing-option-and-result)
     * [The limits of combinators](#the-limits-of-combinators)
     * [Early returns](#early-returns)
-    * [The `try!` macro](#the-try-macro)
+    * [The `try!` macro/`?` operator](#the-try-macro-operator)
     * [Defining your own error type](#defining-your-own-error-type)
 * [Standard library traits used for error handling](#standard-library-traits-used-for-error-handling)
     * [The `Error` trait](#the-error-trait)
     * [The `From` trait](#the-from-trait)
-    * [The real `try!` macro](#the-real-try-macro)
+    * [The real `try!` macro/`?` operator](#the-real-try-macro-operator)
     * [Composing custom error types](#composing-custom-error-types)
     * [Advice for library writers](#advice-for-library-writers)
 * [Case study: A program to read population data](#case-study-a-program-to-read-population-data)
@@ -982,12 +983,12 @@ back to explicit case analysis here. It turns out, there are *multiple* ways to
 reduce explicit case analysis. Combinators aren't the only way.
 
 
-### The `try!` macro
+### The `try!` macro/`?` operator
 
-A cornerstone of error handling in Rust is the `try!` macro. The `try!` macro
-abstracts case analysis just like combinators, but unlike combinators, it also
-abstracts *control flow*. Namely, it can abstract the *early return* pattern
-seen above.
+In older versions of Rust (Rust 1.12 or older), a cornerstone of error handling
+in Rust is the `try!` macro. The `try!` macro abstracts case analysis just like
+combinators, but unlike combinators, it also abstracts *control flow*. Namely,
+it can abstract the *early return* pattern seen above.
 
 Here is a simplified definition of a `try!` macro:
 
@@ -1035,6 +1036,31 @@ This is because the error types still need to be converted to `String`.
 The good news is that we will soon learn how to remove those `map_err` calls!
 The bad news is that we will need to learn a bit more about a couple important
 traits in the standard library before we can remove the `map_err` calls.
+
+In newer versions of Rust (Rust 1.13 or newer), the `try!` macro was replaced
+with the `?` operator. While it is intended to grow new powers that we won't
+cover here, using `?` instead of `try!` is simple:
+
+{{< code-rust "io-basic-error-question" >}}
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
+
+fn file_double<P: AsRef<Path>>(file_path: P) -> Result<i32, String> {
+    let mut file = File::open(file_path).map_err(|e| e.to_string())?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).map_err(|e| e.to_string())?;
+    let n = contents.trim().parse::<i32>().map_err(|e| e.to_string())?;
+    Ok(2 * n)
+}
+
+fn main() {
+    match file_double("foobar") {
+        Ok(n) => println!("{}", n),
+        Err(err) => println!("Error: {}", err),
+    }
+}
+{{< /code-rust >}}
 
 
 ### Defining your own error type
@@ -1102,10 +1128,10 @@ use std::io::Read;
 use std::path::Path;
 
 fn file_double<P: AsRef<Path>>(file_path: P) -> Result<i32, CliError> {
-    let mut file = try!(File::open(file_path).map_err(CliError::Io));
+    let mut file = File::open(file_path).map_err(CliError::Io)?;
     let mut contents = String::new();
-    try!(file.read_to_string(&mut contents).map_err(CliError::Io));
-    let n: i32 = try!(contents.trim().parse().map_err(CliError::Parse));
+    file.read_to_string(&mut contents).map_err(CliError::Io)?;
+    let n: i32 = contents.trim().parse().map_err(CliError::Parse)?;
     Ok(2 * n)
 }
 
@@ -1320,10 +1346,10 @@ its argument and its return type.
 This pattern is important because it solves a problem we had earlier: it gives
 us a way to reliably convert errors to the same type using the same function.
 
-Time to revisit an old friend; the `try!` macro.
+Time to revisit an old friend; the `try!` macro/`?` operator.
 
 
-### The real `try!` macro
+### The real `try!` macro/`?` operator
 
 Previously, I presented this definition of `try!`:
 
@@ -1350,10 +1376,29 @@ macro_rules! try {
 
 There's one tiny but powerful change: the error value is passed through
 `From::from`. This makes the `try!` macro a lot more powerful because it gives
-you automatic type conversion for free.
+you automatic type conversion for free. This is also very similar to how the
+`?` operator works, which is defined slightly differently. Namely, `x?`
+desuragers to something like the following:
 
-Armed with our more powerful `try!` macro, let's take a look at code we wrote
-previously to read a file and convert its contents to an integer:
+{{< code-rust "questionmark-def" >}}
+match ::std::ops::Try::into_result(x) {
+    Ok(v) => v,
+    Err(e) => return ::std::ops::Try::from_error(From::from(e)),
+}
+{{< /code-rust >}}
+
+The [`Try` trait](https://doc.rust-lang.org/std/ops/trait.Try.html) is still
+unstable and beyond the scope of this article, but the essence of it is that
+it provides a way to abstract over many different types of success/failure
+scenarios, without being tightly coupled to `Result<T, E>`. As you can see
+though, the `x?` syntax still calls `From::from`, which is how we achieve
+automatic error conversion.
+
+Since most code written today uses `?` instead of `try!`, we will use `?` for
+the remainder of this post.
+
+Let's take a look at code we wrote previously to read a file and convert its
+contents to an integer:
 
 {{< high "rust" >}}
 use std::fs::File;
@@ -1361,10 +1406,10 @@ use std::io::Read;
 use std::path::Path;
 
 fn file_double<P: AsRef<Path>>(file_path: P) -> Result<i32, String> {
-    let mut file = try!(File::open(file_path).map_err(|e| e.to_string()));
+    let mut file = File::open(file_path).map_err(|e| e.to_string())?;
     let mut contents = String::new();
-    try!(file.read_to_string(&mut contents).map_err(|e| e.to_string()));
-    let n = try!(contents.trim().parse::<i32>().map_err(|e| e.to_string()));
+    file.read_to_string(&mut contents).map_err(|e| e.to_string())?;
+    let n = contents.trim().parse::<i32>().map_err(|e| e.to_string())?;
     Ok(2 * n)
 }
 {{< /high >}}
@@ -1381,16 +1426,16 @@ use std::io::Read;
 use std::path::Path;
 
 fn file_double<P: AsRef<Path>>(file_path: P) -> Result<i32, Box<Error>> {
-    let mut file = try!(File::open(file_path));
+    let mut file = File::open(file_path)?;
     let mut contents = String::new();
-    try!(file.read_to_string(&mut contents));
-    let n = try!(contents.trim().parse::<i32>());
+    file.read_to_string(&mut contents)?;
+    let n = contents.trim().parse::<i32>()?;
     Ok(2 * n)
 }
 {{< /code-rust >}}
 
 We are getting very close to ideal error handling. Our code has very little
-overhead as a result from error handling because the `try!` macro encapsulates
+overhead as a result from error handling because the `?` operator encapsulates
 three things simultaneously:
 
 1. Case analysis.
@@ -1417,7 +1462,7 @@ It's time to revisit our custom `CliError` type and tie everything together.
 
 ### Composing custom error types
 
-In the last section, we looked at the real `try!` macro and how it does
+In the last section, we looked at the real `?` operator and how it does
 automatic type conversion for us by calling `From::from` on the error value.
 In particular, we converted errors to `Box<Error>`, which works, but the type
 is opaque to callers.
@@ -1441,16 +1486,17 @@ enum CliError {
 }
 
 fn file_double_verbose<P: AsRef<Path>>(file_path: P) -> Result<i32, CliError> {
-    let mut file = try!(File::open(file_path).map_err(CliError::Io));
+    let mut file = File::open(file_path).map_err(CliError::Io)?;
     let mut contents = String::new();
-    try!(file.read_to_string(&mut contents).map_err(CliError::Io));
-    let n: i32 = try!(contents.trim().parse().map_err(CliError::Parse));
+    file.read_to_string(&mut contents).map_err(CliError::Io)?;
+    let n: i32 = contents.trim().parse().map_err(CliError::Parse)?;
     Ok(2 * n)
 }
 {{< /code-rust >}}
 
 Notice that we still have the calls to `map_err`. Why? Well, recall the
-definitions of [`try!`](#code-try-def) and [`From`](#code-from-def). The
+definitions of the
+[`?` operator](#code-questionmark-def) and [`From`](#code-from-def). The
 problem is that there is no `From` impl that allows us to convert from error
 types like `io::Error` and `num::ParseIntError` to our own custom `CliError`.
 Of course, it is easy to fix this! Since we defined `CliError`, we can impl
@@ -1478,16 +1524,16 @@ We can finally rewrite `file_double`:
 
 {{< code-rust "io-basic-error-custom-from" "3" >}}
 fn file_double<P: AsRef<Path>>(file_path: P) -> Result<i32, CliError> {
-    let mut file = try!(File::open(file_path));
+    let mut file = File::open(file_path)?;
     let mut contents = String::new();
-    try!(file.read_to_string(&mut contents));
-    let n: i32 = try!(contents.trim().parse());
+    file.read_to_string(&mut contents)?;
+    let n: i32 = contents.trim().parse()?;
     Ok(2 * n)
 }
 {{< /code-rust >}}
 
 The only thing we did here was remove the calls to `map_err`. They are no
-longer needed because the `try!` macro invokes `From::from` on the error value.
+longer needed because the `?` operator invokes `From::from` on the error value.
 This works because we've provided `From` impls for all the error types that
 could appear.
 
@@ -1894,8 +1940,8 @@ To convert this to proper error handling, we need to do the following:
 
 1. Change the return type of `search` to be `Result<Vec<PopulationCount>,
    Box<Error>>`.
-2. Use the [`try!` macro](#code-try-def) so that errors are returned to the
-   caller instead of panicking the program.
+2. Use the `?` operator so that errors are returned to the caller instead of
+   panicking the program.
 3. Handle the error in `main`.
 
 Let's try it:
@@ -1905,10 +1951,10 @@ fn search<P: AsRef<Path>>
          (file_path: P, city: &str)
          -> Result<Vec<PopulationCount>, Box<Error+Send+Sync>> {
     let mut found = vec![];
-    let file = try!(fs::File::open(file_path));
+    let file = fs::File::open(file_path)?;
     let mut rdr = csv::Reader::from_reader(file);
     for row in rdr.decode::<Row>() {
-        let row = try!(row);
+        let row = row?;
         match row.population {
             None => { } // skip it
             Some(count) => if row.city == city {
@@ -1928,8 +1974,8 @@ fn search<P: AsRef<Path>>
 }
 {{< /high >}}
 
-Instead of `x.unwrap()`, we now have `try!(x)`. Since our function returns a
-`Result<T, E>`, the `try!` macro will return early from the function if an
+Instead of `x.unwrap()`, we now have `x?`. Since our function returns a
+`Result<T, E>`, the `?` operator will return early from the function if an
 error occurs.
 
 There is one big gotcha in this code: we used `Box<Error + Send + Sync>`
@@ -2007,7 +2053,7 @@ fn search<P: AsRef<Path>>
     let mut found = vec![];
     let input: Box<io::Read> = match *file_path {
         None => Box::new(io::stdin()),
-        Some(ref file_path) => Box::new(try!(fs::File::open(file_path))),
+        Some(ref file_path) => Box::new(fs::File::open(file_path)?),
     };
     let mut rdr = csv::Reader::from_reader(input);
     // The rest remains unchanged!
@@ -2079,10 +2125,10 @@ impl From<csv::Error> for CliError {
 }
 {{< /high >}}
 
-The `From` impls are important because of how
-[`try!` is defined](#code-try-def). In particular, if an error occurs,
-`From::from` is called on the error, which in this case, will convert it to our
-own error type `CliError`.
+The `From` impls are important because of how the
+[`?` operator is defined](#code-questionmark-def). In particular, if an error
+occurs, `From::from` is called on the error, which in this case, will convert
+it to our own error type `CliError`.
 
 With the `From` impls done, we only need to make two small tweaks to our
 `search` function: the return type and the "not found" error. Here it is in
@@ -2095,11 +2141,11 @@ fn search<P: AsRef<Path>>
     let mut found = vec![];
     let input: Box<io::Read> = match *file_path {
         None => Box::new(io::stdin()),
-        Some(ref file_path) => Box::new(try!(fs::File::open(file_path))),
+        Some(ref file_path) => Box::new(fs::File::open(file_path)?),
     };
     let mut rdr = csv::Reader::from_reader(input);
     for row in rdr.decode::<Row>() {
-        let row = try!(row);
+        let row = row?;
         match row.population {
             None => { } // skip it
             Some(count) => if row.city == city {
@@ -2212,15 +2258,16 @@ heuristics!
   `unwrap`. Be warned: if it winds up in someone else's hands, don't be
   surprised if they are agitated by poor error messages!
 * If you're writing a quick 'n' dirty program and feel ashamed about panicking
-  anyway, then using either a `String` or a `Box<Error + Send + Sync>` for your
-  error type (the `Box<Error + Send + Sync>` type is because of the
-  [available `From` impls](http://doc.rust-lang.org/std/convert/trait.From.html)).
+  anyway, then you should probably use a `failure::Error` from the
+  [`failure`](https://docs.rs/failure) crate as your error type. You can think
+  a [`failure::Error`](https://docs.rs/failure/0.1.1/failure/struct.Error.html)
+  like a `Box<Error>` seen in the examples above, but with attached backtraces
+  and better downcast support.
 * Otherwise, in a program, define your own error types with appropriate
   [`From`](http://doc.rust-lang.org/std/convert/trait.From.html)
   and
   [`Error`](http://doc.rust-lang.org/std/error/trait.Error.html)
-  impls to make the [`try!`](http://doc.rust-lang.org/std/macro.try!.html)
-  macro more ergnomic.
+  impls to make the `?` operator macro more ergnomic.
 * If you're writing a library and your code can produce errors, define your own
   error type and implement the
   [`std::error::Error`](http://doc.rust-lang.org/std/error/trait.Error.html)
@@ -2234,5 +2281,9 @@ heuristics!
   and
   [`Result`](http://doc.rust-lang.org/std/result/enum.Result.html).
   Using them exclusively can be a bit tiring at times, but I've personally
-  found a healthy mix of `try!` and combinators to be quite appealing.
-  `and_then`, `map` and `unwrap_or` are my favorites.
+  found a healthy mix of the `?` operator and combinators to be quite
+  appealing. `and_then`, `map` and `unwrap_or` are my favorites.
+
+Looking towards the future, it is possible that the above advice will become
+outdated as the [`failure`](https://docs.rs/failure) crate gains prominence.
+See the [`failure` guide](https://boats.gitlab.io/failure/) for more details.
