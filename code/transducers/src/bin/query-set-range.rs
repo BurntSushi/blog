@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+#![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
 
 use std::error::Error;
@@ -10,7 +10,7 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   
   // Same as previous example.
   let keys = vec!["bruce", "clarence", "danny", "garry", "max", "roy", "stevie"];
-  let set = try!(Set::from_iter(&keys));
+  let set = Set::from_iter(&keys)?;
   
   // Build a range query that includes all keys greater than or equal to `c`
   // and less than or equal to `roy`.
@@ -22,7 +22,7 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   // Use a convenience method defined on streams to collect the elements in the
   // stream into a sequence of strings. This is effectively a shorter form of the
   // `while let` loop we wrote out in the previous example.
-  let got_keys = try!(stream.into_strs());
+  let got_keys = stream.into_strs()?;
   
   // Check that we got the right keys.
   assert_eq!(got_keys, &keys[1..6]);

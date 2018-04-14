@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+#![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
 
 use std::error::Error;
@@ -10,8 +10,8 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   builder.insert("bar", 1).unwrap();
   builder.insert("baz", 2).unwrap();
   builder.insert("foo", 3).unwrap();
-  let fst_bytes = try!(builder.into_inner());
-  let fst = try!(Fst::from_bytes(fst_bytes));
+  let fst_bytes = builder.into_inner()?;
+  let fst = Fst::from_bytes(fst_bytes)?;
   
   // Get the root node of this FST.
   let root = fst.root();

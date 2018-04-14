@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+#![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
 
 use std::error::Error;
@@ -20,7 +20,7 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   
   // Finish building the set and get back a region of memory that can be
   // read as an FST.
-  let fst_bytes = try!(set_builder.into_inner());
+  let fst_bytes = set_builder.into_inner()?;
   
   // And create a new Set with those bytes.
   // We'll cover this more in the next section on querying.

@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+#![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
 
 use std::error::Error;
@@ -15,7 +15,7 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   map_builder.insert("stevie", 1975).unwrap();
   
   // These steps are exactly the same as before.
-  let fst_bytes = try!(map_builder.into_inner());
+  let fst_bytes = map_builder.into_inner()?;
   let map = Map::from_bytes(fst_bytes).unwrap();
     Ok(())
 }

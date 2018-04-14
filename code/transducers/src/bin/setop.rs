@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+#![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
 
 use std::error::Error;
@@ -11,11 +11,11 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   
   // Create 5 sets. As a convenience, these are stored in memory, but they could
   // just as easily have been memory mapped from disk using `Set::from_path`.
-  let set1 = try!(Set::from_iter(&["AC/DC", "Aerosmith"]));
-  let set2 = try!(Set::from_iter(&["Bob Seger", "Bruce Springsteen"]));
-  let set3 = try!(Set::from_iter(&["George Thorogood", "Golden Earring"]));
-  let set4 = try!(Set::from_iter(&["Kansas"]));
-  let set5 = try!(Set::from_iter(&["Metallica"]));
+  let set1 = Set::from_iter(&["AC/DC", "Aerosmith"])?;
+  let set2 = Set::from_iter(&["Bob Seger", "Bruce Springsteen"])?;
+  let set3 = Set::from_iter(&["George Thorogood", "Golden Earring"])?;
+  let set4 = Set::from_iter(&["Kansas"])?;
+  let set5 = Set::from_iter(&["Metallica"])?;
   
   // Build a set operation. All we need to do is add a stream from each set and
   // ask for the union. (Other operations, such as `intersection`, are also
@@ -33,7 +33,7 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   // we've seen before.
   let mut keys = vec![];
   while let Some(key) = stream.next() {
-      let key = try!(from_utf8(key)).to_owned();
+      let key = from_utf8(key)?.to_string();
       keys.push(key);
   }
   assert_eq!(keys, vec![

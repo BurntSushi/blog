@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+#![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
 
 use std::error::Error;
@@ -8,7 +8,7 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   
   // Construct the set from a file path.
   // The fst crate implements this using a memory map.
-  let set = try!(Set::from_path("set.fst"));
+  let set = Set::from_path("set.fst")?;
   
   // Finally, we can query. This can happen immediately, without having
   // to read the entire set into memory.

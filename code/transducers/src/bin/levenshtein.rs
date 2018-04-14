@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+#![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
 
 use std::error::Error;
@@ -9,17 +9,17 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   use fst::{IntoStreamer, Streamer, Levenshtein, Set};
   
   let keys = vec!["fa", "fo", "fob", "focus", "foo", "food", "foul"];
-  let set = try!(Set::from_iter(keys));
+  let set = Set::from_iter(keys)?;
   
   // Build our fuzzy query. This says to search for "foo" and return any keys
   // that have a Levenshtein distance from "foo" of no more than 1.
-  let lev = try!(Levenshtein::new("foo", 1));
+  let lev = Levenshtein::new("foo", 1)?;
   
   // Apply our fuzzy query to the set we built and turn the query into a stream.
   let stream = set.search(lev).into_stream();
   
   // Get the results and confirm that they are what we expect.
-  let keys = try!(stream.into_strs());
+  let keys = stream.into_strs()?;
   assert_eq!(keys, vec![
       "fo",   // 1 deletion
       "fob",  // 1 substitution

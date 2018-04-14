@@ -875,7 +875,7 @@ use std::io;
 use fst::SetBuilder;
 
 // Create a file handle that will write to "set.fst" in the current directory.
-let file_handle = try!(File::create("set.fst"));
+let file_handle = File::create("set.fst")?;
 
 // Make sure writes to the file are buffered.
 let buffered_writer = io::BufWriter::new(file_handle);
@@ -883,28 +883,28 @@ let buffered_writer = io::BufWriter::new(file_handle);
 // Create a set builder that streams the data structure to set.fst.
 // We could use a socket here, or an in memory buffer, or anything that
 // is "writable" in Rust.
-let mut set_builder = try!(SetBuilder::new(buffered_writer));
+let mut set_builder = SetBuilder::new(buffered_writer)?;
 
 // Insert a few keys from the greatest band of all time.
 // An insert can fail in one of two ways: either a key was inserted out of
 // order or there was a problem writing to the underlying file.
-try!(set_builder.insert("bruce"));
-try!(set_builder.insert("clarence"));
-try!(set_builder.insert("stevie"));
+set_builder.insert("bruce")?;
+set_builder.insert("clarence")?;
+set_builder.insert("stevie")?;
 
 // Finish building the set and make sure the entire data structure is flushed
 // to disk. After this is called, no more inserts are allowed. (And indeed,
 // are prevented by Rust's type/ownership system!)
-try!(set_builder.finish());
+set_builder.finish()?;
 {{< /code-rust >}}
 
 (If you aren't familiar with Rust, you're probably wondering: what the heck is
-that `try!` thing? Well, in short, it's a macro that uses early returns and
+that `?` thing? Well, in short, it's an operator that uses early returns and
 polymorphism to handle errors for us. The best way to think of it is: every
-time you see `try!`, it means the underlying operation may fail, and if it
-does, return the error value and stop executing the current function. I defer
-to the book for [more on error handling in
-Rust](https://doc.rust-lang.org/stable/book/error-handling.html).)
+time you see `?`, it means the underlying operation may fail, and if it
+does, return the error value and stop executing the current function. See my
+[other blog post on error handling in Rust](/rust-error-handling) for more
+details.
 
 At a high level, this code is:
 
@@ -933,7 +933,7 @@ set_builder.insert("stevie").unwrap();
 
 // Finish building the set and get back a region of memory that can be
 // read as an FST.
-let fst_bytes = try!(set_builder.into_inner());
+let fst_bytes = set_builder.into_inner()?;
 
 // And create a new Set with those bytes.
 // We'll cover this more in the next section on querying.
@@ -965,7 +965,7 @@ map_builder.insert("clarence", 1972).unwrap();
 map_builder.insert("stevie", 1975).unwrap();
 
 // These steps are exactly the same as before.
-let fst_bytes = try!(map_builder.into_inner());
+let fst_bytes = map_builder.into_inner()?;
 let map = Map::from_bytes(fst_bytes).unwrap();
 {{< /code-rust >}}
 
@@ -989,7 +989,7 @@ The following code builds a set in memory:
 {{< code-rust "build-set-shortcut" >}}
 use fst::Set;
 
-let set = try!(Set::from_iter(vec!["bruce", "clarence", "stevie"]));
+let set = Set::from_iter(vec!["bruce", "clarence", "stevie"])?;
 {{< /code-rust >}}
 
 This will achieve the same result as before. The only difference is that we
@@ -1002,11 +1002,11 @@ values) instead of a sequence of byte strings (keys):
 {{< code-rust "build-map-shortcut" >}}
 use fst::Map;
 
-let map = try!(Map::from_iter(vec![
+let map = Map::from_iter(vec![
   ("bruce", 1972),
   ("clarence", 1972),
   ("stevie", 1975),
-]));
+])?;
 {{< /code-rust >}}
 
 ### Querying ordered sets and maps
@@ -1024,7 +1024,7 @@ Sets are simple. The key operation is: "does the set contain this key?"
 {{< code-rust "query-set-contains" >}}
 use fst::Set;
 
-let set = try!(Set::from_iter(vec!["bruce", "clarence", "stevie"]));
+let set = Set::from_iter(vec!["bruce", "clarence", "stevie"])?;
 
 assert!(set.contains("bruce"));    // "bruce" is in the set
 assert!(!set.contains("andrew"));  // "andrew" is not
@@ -1039,11 +1039,11 @@ with the key.
 {{< code-rust "query-map-get" >}}
 use fst::Map;
 
-let map = try!(Map::from_iter(vec![
+let map = Map::from_iter(vec![
   ("bruce", 1972),
   ("clarence", 1972),
   ("stevie", 1975),
-]));
+])?;
 
 // Maps have `contains_key`, which is just like a set's `contains`:
 assert!(map.contains_key("bruce"));    // "bruce" is in the map
@@ -1074,7 +1074,7 @@ let keys = vec!["bruce", "clarence", "danny", "garry", "max", "roy", "stevie"];
 // Pass a reference with `&keys`. If we had just used `keys` instead, then it
 // would have *moved* into `Set::from_iter`, which would prevent us from using
 // it below to check that the keys we got are the same as the keys we gave.
-let set = try!(Set::from_iter(&keys));
+let set = Set::from_iter(&keys)?;
 
 // Ask the set for a stream of all of its keys.
 let mut stream = set.stream();
@@ -1084,7 +1084,7 @@ let mut got_keys = vec![];
 while let Some(key) = stream.next() {
     // Keys are byte sequences, but the keys we inserted are strings.
     // Strings in Rust are UTF-8 encoded, so we need to decode here.
-    let key = try!(from_utf8(key)).to_owned();
+    let key = from_utf8(key)?.to_string();
     got_keys.push(key);
 }
 assert_eq!(keys, got_keys);
@@ -1130,7 +1130,7 @@ use fst::{IntoStreamer, Streamer, Set};
 
 // Same as previous example.
 let keys = vec!["bruce", "clarence", "danny", "garry", "max", "roy", "stevie"];
-let set = try!(Set::from_iter(&keys));
+let set = Set::from_iter(&keys)?;
 
 // Build a range query that includes all keys greater than or equal to `c`
 // and less than or equal to `roy`.
@@ -1142,7 +1142,7 @@ let stream = range.into_stream();
 // Use a convenience method defined on streams to collect the elements in the
 // stream into a sequence of strings. This is effectively a shorter form of the
 // `while let` loop we wrote out in the previous example.
-let got_keys = try!(stream.into_strs());
+let got_keys = stream.into_strs()?;
 
 // Check that we got the right keys.
 assert_eq!(got_keys, &keys[1..6]);
@@ -1193,12 +1193,12 @@ use std::io::Read;
 use fst::Set;
 
 // Open a handle to a file and read its entire contents into memory.
-let mut file_handle = try!(File::open("set.fst"));
+let mut file_handle = File::open("set.fst")?;
 let mut bytes = vec![];
-try!(file_handle.read_to_end(&mut bytes));
+file_handle.read_to_end(&mut bytes)?;
 
 // Construct the set.
-let set = try!(Set::from_bytes(bytes));
+let set = Set::from_bytes(bytes)?;
 
 // Finally, we can query.
 println!("number of elements: {}", set.len());
@@ -1258,7 +1258,7 @@ use fst::Set;
 
 // Construct the set from a file path.
 // The fst crate implements this using a memory map.
-let set = try!(Set::from_path("set.fst"));
+let set = Set::from_path("set.fst")?;
 
 // Finally, we can query. This can happen immediately, without having
 // to read the entire set into memory.
@@ -1334,17 +1334,17 @@ Here is a quick example that demonstrates a fuzzy search on an ordered set.
 use fst::{IntoStreamer, Streamer, Levenshtein, Set};
 
 let keys = vec!["fa", "fo", "fob", "focus", "foo", "food", "foul"];
-let set = try!(Set::from_iter(keys));
+let set = Set::from_iter(keys)?;
 
 // Build our fuzzy query. This says to search for "foo" and return any keys
 // that have a Levenshtein distance from "foo" of no more than 1.
-let lev = try!(Levenshtein::new("foo", 1));
+let lev = Levenshtein::new("foo", 1)?;
 
 // Apply our fuzzy query to the set we built and turn the query into a stream.
 let stream = set.search(lev).into_stream();
 
 // Get the results and confirm that they are what we expect.
-let keys = try!(stream.into_strs());
+let keys = stream.into_strs()?;
 assert_eq!(keys, vec![
     "fo",   // 1 deletion
     "fob",  // 1 substitution
@@ -1460,21 +1460,21 @@ Here's a simple example:
 use fst::{IntoStreamer, Streamer, Regex, Set};
 
 let keys = vec!["123", "food", "xyz123", "τροφή", "еда", "מזון", "☃☃☃"];
-let set = try!(Set::from_iter(keys));
+let set = Set::from_iter(keys)?;
 
 // Build a regular expression. This can fail if the syntax is incorrect or
 // if the automaton becomes too big.
 // This particular regular expression matches keys that are not empty and
 // only contain letters. Use of `\pL` here stands for "any Unicode codepoint
 // that is considered a letter."
-let lev = try!(Regex::new(r"\pL+"));
+let lev = Regex::new(r"\pL+")?;
 
 // Apply our regular expression query to the set we built and turn the query
 // into a stream.
 let stream = set.search(lev).into_stream();
 
 // Get the results and confirm that they are what we expect.
-let keys = try!(stream.into_strs());
+let keys = stream.into_strs()?;
 
 // Notice that "123", "xyz123" and "☃☃☃" did not match.
 assert_eq!(keys, vec![
@@ -1542,11 +1542,11 @@ use fst::set;
 
 // Create 5 sets. As a convenience, these are stored in memory, but they could
 // just as easily have been memory mapped from disk using `Set::from_path`.
-let set1 = try!(Set::from_iter(&["AC/DC", "Aerosmith"]));
-let set2 = try!(Set::from_iter(&["Bob Seger", "Bruce Springsteen"]));
-let set3 = try!(Set::from_iter(&["George Thorogood", "Golden Earring"]));
-let set4 = try!(Set::from_iter(&["Kansas"]));
-let set5 = try!(Set::from_iter(&["Metallica"]));
+let set1 = Set::from_iter(&["AC/DC", "Aerosmith"])?;
+let set2 = Set::from_iter(&["Bob Seger", "Bruce Springsteen"])?;
+let set3 = Set::from_iter(&["George Thorogood", "Golden Earring"])?;
+let set4 = Set::from_iter(&["Kansas"])?;
+let set5 = Set::from_iter(&["Metallica"])?;
 
 // Build a set operation. All we need to do is add a stream from each set and
 // ask for the union. (Other operations, such as `intersection`, are also
@@ -1564,7 +1564,7 @@ let mut stream =
 // we've seen before.
 let mut keys = vec![];
 while let Some(key) = stream.next() {
-    let key = try!(from_utf8(key)).to_owned();
+    let key = from_utf8(key)?.to_string();
     keys.push(key);
 }
 assert_eq!(keys, vec![
@@ -1599,14 +1599,14 @@ use fst::set;
 
 // Create 5 sets. As a convenience, these are stored in memory, but they could
 // just as easily have been memory mapped from disk using `Set::from_path`.
-let set1 = try!(Set::from_iter(&["AC/DC", "Aerosmith"]));
-let set2 = try!(Set::from_iter(&["Bob Seger", "Bruce Springsteen"]));
-let set3 = try!(Set::from_iter(&["George Thorogood", "Golden Earring"]));
-let set4 = try!(Set::from_iter(&["Kansas"]));
-let set5 = try!(Set::from_iter(&["Metallica"]));
+let set1 = Set::from_iter(&["AC/DC", "Aerosmith"])?;
+let set2 = Set::from_iter(&["Bob Seger", "Bruce Springsteen"])?;
+let set3 = Set::from_iter(&["George Thorogood", "Golden Earring"])?;
+let set4 = Set::from_iter(&["Kansas"])?;
+let set5 = Set::from_iter(&["Metallica"])?;
 
 // Build our regular expression query.
-let spaces = try!(Regex::new(r".*\s.*"));
+let spaces = Regex::new(r".*\s.*")?;
 
 // Build a set operation. All we need to do is add a stream from each set and
 // ask for the union. (Other operations, such as `intersection`, are also
@@ -1624,7 +1624,7 @@ let mut stream =
 // results down a bit.
 let mut keys = vec![];
 while let Some(key) = stream.next() {
-    let key = try!(from_utf8(key)).to_owned();
+    let key = from_utf8(key)?.to_string();
     keys.push(key);
 }
 assert_eq!(keys, vec![
@@ -1676,10 +1676,10 @@ builder.insert("baz", 2).unwrap();
 builder.insert("foo", 3).unwrap();
 
 // Finish construction and get the raw bytes of the fst.
-let fst_bytes = try!(builder.into_inner());
+let fst_bytes = builder.into_inner()?;
 
 // Create an Fst that we can query.
-let fst = try!(Fst::from_bytes(fst_bytes));
+let fst = Fst::from_bytes(fst_bytes)?;
 
 // Basic querying.
 assert!(fst.contains_key("foo"));
@@ -1718,8 +1718,8 @@ let mut builder = Builder::memory();
 builder.insert("bar", 1).unwrap();
 builder.insert("baz", 2).unwrap();
 builder.insert("foo", 3).unwrap();
-let fst_bytes = try!(builder.into_inner());
-let fst = try!(Fst::from_bytes(fst_bytes));
+let fst_bytes = builder.into_inner()?;
+let fst = Fst::from_bytes(fst_bytes)?;
 
 // Get the root node of this FST.
 let root = fst.root();

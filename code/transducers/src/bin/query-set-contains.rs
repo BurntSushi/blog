@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+#![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
 
 use std::error::Error;
@@ -6,7 +6,7 @@ use std::error::Error;
 fn main2() -> Result<(), Box<Error+Send+Sync>> {
     use fst::Set;
   
-  let set = try!(Set::from_iter(vec!["bruce", "clarence", "stevie"]));
+  let set = Set::from_iter(vec!["bruce", "clarence", "stevie"])?;
   
   assert!(set.contains("bruce"));    // "bruce" is in the set
   assert!(!set.contains("andrew"));  // "andrew" is not

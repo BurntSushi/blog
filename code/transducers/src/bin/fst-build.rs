@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+#![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
 
 use std::error::Error;
@@ -13,10 +13,10 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   builder.insert("foo", 3).unwrap();
   
   // Finish construction and get the raw bytes of the fst.
-  let fst_bytes = try!(builder.into_inner());
+  let fst_bytes = builder.into_inner()?;
   
   // Create an Fst that we can query.
-  let fst = try!(Fst::from_bytes(fst_bytes));
+  let fst = Fst::from_bytes(fst_bytes)?;
   
   // Basic querying.
   assert!(fst.contains_key("foo"));

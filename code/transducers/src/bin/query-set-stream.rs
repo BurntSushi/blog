@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_imports, unused_variables)]
+#![allow(dead_code, unused_imports, unused_macros, unused_variables)]
 extern crate fst;
 
 use std::error::Error;
@@ -17,7 +17,7 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   // Pass a reference with `&keys`. If we had just used `keys` instead, then it
   // would have *moved* into `Set::from_iter`, which would prevent us from using
   // it below to check that the keys we got are the same as the keys we gave.
-  let set = try!(Set::from_iter(&keys));
+  let set = Set::from_iter(&keys)?;
   
   // Ask the set for a stream of all of its keys.
   let mut stream = set.stream();
@@ -27,7 +27,7 @@ fn main2() -> Result<(), Box<Error+Send+Sync>> {
   while let Some(key) = stream.next() {
       // Keys are byte sequences, but the keys we inserted are strings.
       // Strings in Rust are UTF-8 encoded, so we need to decode here.
-      let key = try!(from_utf8(key)).to_owned();
+      let key = from_utf8(key)?.to_string();
       got_keys.push(key);
   }
   assert_eq!(keys, got_keys);
