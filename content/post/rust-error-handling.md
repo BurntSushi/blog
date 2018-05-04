@@ -1586,7 +1586,7 @@ of an error (because it requires impls for both `fmt::Debug` and
 Beyond that, it can also be useful to provide implementations of `From` on your
 error types. This allows you (the library author) and your users to
 [compose more detailed errors](#composing-custom-error-types). For example,
-[`csv::Error`](https://burntsushi.net/rustdoc/csv/enum.Error.html)
+[`csv::Error`](https://burntsushi.net/rustdoc/csv/1.0.0-beta.5/enum.Error.html)
 provides `From` impls for both `io::Error` and `byteorder::Error`.
 
 Finally, depending on your tastes, you may also want to define a
@@ -1856,7 +1856,7 @@ Let's outline the errors. We can start with the obvious: the three places that
    record](https://burntsushi.net/rustdoc/csv/struct.DecodedRecords.html)
    (look at the `Item` associated type on the `Iterator` impl)
    can produce a
-   [`csv::Error`](https://burntsushi.net/rustdoc/csv/enum.Error.html).
+   [`csv::Error`](https://burntsushi.net/rustdoc/csv/1.0.0-beta.5/enum.Error.html).
 3. If `row.population` is `None`, then calling `expect` will panic.
 
 Are there any others? What if we can't find a matching city? Tools like `grep`
