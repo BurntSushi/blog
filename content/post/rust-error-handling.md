@@ -1378,7 +1378,7 @@ There's one tiny but powerful change: the error value is passed through
 `From::from`. This makes the `try!` macro a lot more powerful because it gives
 you automatic type conversion for free. This is also very similar to how the
 `?` operator works, which is defined slightly differently. Namely, `x?`
-desuragers to something like the following:
+desugarers to something like the following:
 
 {{< code-rust "questionmark-def" >}}
 match ::std::ops::Try::into_result(x) {
