@@ -8,14 +8,14 @@ url = "csv"
 plainIdAnchors = true
 +++
 
-With a beta of `csv 1.0` just released, the time is ripe for a
-tutorial on how to read and write CSV data in Rust. This tutorial is targeted
-toward beginning Rust programmers, and is therefore full of examples and spends
-some time on basic concepts. Experienced Rust programmers may find parts of
-this useful, but would probably be happier with a quick skim.
+With `csv 1.0` just released, the time is ripe for a tutorial on how to read
+and write CSV data in Rust. This tutorial is targeted toward beginning Rust
+programmers, and is therefore full of examples and spends some time on basic
+concepts. Experienced Rust programmers may find parts of this useful, but would
+probably be happier with a quick skim.
 
 For an introduction to Rust, please see the
-[official book](https://doc.rust-lang.org/beta/book/second-edition/).
+[official book](https://doc.rust-lang.org/book/second-edition/).
 If you haven't written any Rust code yet but have written code in another
 language, then this tutorial might be accessible to you without needing to read
 the book first.
@@ -26,7 +26,7 @@ and has
 [comprehensive API documentation](https://docs.rs/csv).
 
 Finally, a version of this blog post is included as a
-[tutorial](https://docs.rs/csv/1.0.0-beta.3/csv/tutorial/index.html)
+[tutorial](https://docs.rs/csv/1.0.0/csv/tutorial/index.html)
 in the API documentation, and is more likely to be updated as time passes.
 
 **Target audience**: Beginning Rust programmers.
@@ -56,7 +56,7 @@ in the API documentation, and is more likely to be updated as time passes.
     * [CSV parsing without the standard library](#csv-parsing-without-the-standard-library)
 * [Closing thoughts](#closing-thoughts)
 
-## CSV 1.0 beta release
+## CSV 1.0 release
 
 Before diving into the tutorial, I wanted to briefly recount the road to 1.0.
 The first commit to the `rust-csv` repository was on March 22, 2014, which is
@@ -125,7 +125,7 @@ $ cd csvtutor
 {{< /high >}}
 
 Once inside `csvtutor`, open `Cargo.toml` in your favorite text editor and add
-`csv = "1.0.0-beta.3"` to your `[dependencies]` section. At this point, your
+`csv = "1"` to your `[dependencies]` section. At this point, your
 `Cargo.toml` should look something like this:
 
 {{< high text >}}
@@ -135,7 +135,7 @@ version = "0.1.0"
 authors = ["Your Name"]
 
 [dependencies]
-csv = "1.0.0-beta.3"
+csv = "1"
 {{< /high >}}
 
 Next, let's build your project. Since you added the `csv` crate as a
@@ -220,9 +220,9 @@ comfortable with things like `Result` and `try!`/`?` in Rust, then you can
 safely skip this section.**
 
 Note that
-[The Rust Programming Language Book](https://doc.rust-lang.org/beta/book/second-edition/)
+[The Rust Programming Language Book](https://doc.rust-lang.org/book/second-edition/)
 contains an
-[introduction to general error handling](https://doc.rust-lang.org/beta/book/second-edition/ch09-00-error-handling.html).
+[introduction to general error handling](https://doc.rust-lang.org/book/second-edition/ch09-00-error-handling.html).
 For a deeper dive, see
 [my blog post on error handling in Rust](http://blog.burntsushi.net/rust-error-handling/).
 The blog post is especially important if you plan on building Rust libraries.
@@ -302,14 +302,14 @@ records. The header and first data record have two fields, but the second
 data record has three fields. By default, the csv crate will treat inconsistent
 record lengths as an error.
 (This behavior can be toggled using the
-[`ReaderBuilder::flexible`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.ReaderBuilder.html#method.flexible)
+[`ReaderBuilder::flexible`](https://docs.rs/csv/1.0.0/csv/struct.ReaderBuilder.html#method.flexible)
 config knob.) This explains why the first data record is printed in this
 example, since it has the same number of fields as the header record. That is,
 we don't actually hit an error until we parse the second data record.
 
 (Note that the CSV reader automatically interprets the first record as a
 header. This can be toggled with the
-[`ReaderBuilder::has_headers`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.ReaderBuilder.html#method.has_headers)
+[`ReaderBuilder::has_headers`](https://docs.rs/csv/1.0.0/csv/struct.ReaderBuilder.html#method.has_headers)
 config knob.)
 
 So what actually causes the panic to happen in our program? That would be the
@@ -603,7 +603,7 @@ record is a header or not. Instead, if you don't want to treat the first record
 as a header, you'll need to tell the CSV reader that there are no headers.
 
 To configure a CSV reader to do this, we'll need to use a
-[`ReaderBuilder`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.ReaderBuilder.html)
+[`ReaderBuilder`](https://docs.rs/csv/1.0.0/csv/struct.ReaderBuilder.html)
 to build a CSV reader with our desired configuration. Here's an example that
 does just that. (Note that we've moved back to reading from `stdin`, since it
 produces terser examples.)
@@ -635,7 +635,7 @@ StringRecord(["Oakman", "AL", "", "33.7133333", "-87.3886111"])
 {{< /high >}}
 
 If you ever need to access the header record directly, then you can use the
-[`Reader::headers`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.Reader.html#method.headers)
+[`Reader::headers`](https://docs.rs/csv/1.0.0/csv/struct.Reader.html#method.headers)
 method like so:
 
 {{< high rust >}}
@@ -705,7 +705,7 @@ To read this CSV data, we'll want to do the following:
 5. Ignore lines beginning with a `#`.
 
 All of this (and more!) can be configured with a
-[`ReaderBuilder`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.ReaderBuilder.html),
+[`ReaderBuilder`](https://docs.rs/csv/1.0.0/csv/struct.ReaderBuilder.html),
 as seen in the following example:
 
 {{< high rust >}}
@@ -760,7 +760,7 @@ terminator from a new line to any other character. (By default, the terminator
 is `CRLF`, which treats each of `\r\n`, `\r` and `\n` as single record
 terminators.) For more details, see the documentation and examples for each of
 the methods on
-[`ReaderBuilder`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.ReaderBuilder.html).
+[`ReaderBuilder`](https://docs.rs/csv/1.0.0/csv/struct.ReaderBuilder.html).
 
 ## Reading with Serde
 
@@ -1150,7 +1150,7 @@ field in our `Record` type:
 {{< /high >}}
 
 The
-[`invalid_option`](https://docs.rs/csv/1.0.0-beta.3/csv/fn.invalid_option.html)
+[`invalid_option`](https://docs.rs/csv/1.0.0/csv/fn.invalid_option.html)
 function is a generic helper function that does one very simple thing: when
 applied to `Option` fields, it will convert any deserialization error into a
 `None` value. This is useful when you need to work with messy CSV data.
@@ -1365,7 +1365,7 @@ $ ./target/debug/csvtutor
 {{< /high >}}
 
 In this example, we used a new type
-[`QuoteStyle`](https://docs.rs/csv/1.0.0-beta.3/csv/enum.QuoteStyle.html).
+[`QuoteStyle`](https://docs.rs/csv/1.0.0/csv/enum.QuoteStyle.html).
 The `QuoteStyle` type represents the different quoting strategies available
 to you. The default is to add quotes to fields only when necessary. This
 probably works for most use cases, but you can also ask for quotes to always
@@ -1516,7 +1516,7 @@ with field names. When this happens, `serialize` will automatically write a
 header record (only if no other records have been written) that consists of
 the fields in the struct in the order in which they are defined. Note that
 this behavior can be disabled with the
-[`WriterBuilder::has_headers`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.WriterBuilder.html#method.has_headers)
+[`WriterBuilder::has_headers`](https://docs.rs/csv/1.0.0/csv/struct.WriterBuilder.html#method.has_headers)
 method.
 
 It's also worth pointing out the use of a *lifetime parameter* in our `Record`
@@ -1554,7 +1554,7 @@ doing that, but it might be a bit wasteful.
 
 For more examples and more details on the rules for serialization, please see
 the
-[`Writer::serialize`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.Writer.html#method.serialize)
+[`Writer::serialize`](https://docs.rs/csv/1.0.0/csv/struct.Writer.html#method.serialize)
 method.
 
 ## Pipelining
@@ -1674,9 +1674,9 @@ subset). The trick is to use *byte records* instead of *string records*.
 
 Thus far, we haven't actually talked much about the type of a record in this
 library, but now is a good time to introduce them. There are two of them,
-[`StringRecord`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.StringRecord.html)
+[`StringRecord`](https://docs.rs/csv/1.0.0/csv/struct.StringRecord.html)
 and
-[`ByteRecord`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.ByteRecord.html).
+[`ByteRecord`](https://docs.rs/csv/1.0.0/csv/struct.ByteRecord.html).
 Each of them represent a single record in CSV data, where a record is a
 sequence of an arbitrary number of fields. The only difference between
 `StringRecord` and `ByteRecord` is that `StringRecord` is guaranteed to be
@@ -1943,9 +1943,9 @@ sys     0m0.017s
 All right, so what's the first thing we can do to make this faster? This
 section promised to speed things up by amortizing allocation, but we can do
 something even simpler first: iterate over
-[`ByteRecord`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.ByteRecord.html)s
+[`ByteRecord`](https://docs.rs/csv/1.0.0/csv/struct.ByteRecord.html)s
 instead of
-[`StringRecord`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.StringRecord.html)s.
+[`StringRecord`](https://docs.rs/csv/1.0.0/csv/struct.StringRecord.html)s.
 If you recall from a previous section, a `StringRecord` is guaranteed to be
 valid UTF-8, and therefore must validate that its contents is actually UTF-8.
 (If validation fails, then the CSV reader will return an error.) If we remove
@@ -2016,7 +2016,7 @@ be a lot more convenient.
 If we're willing to forgo use of iterators, then we can amortize allocations
 by creating a *single* `ByteRecord` and asking the CSV reader to read into it.
 We do this by using the
-[`Reader::read_byte_record`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.Reader.html#method.read_byte_record)
+[`Reader::read_byte_record`](https://docs.rs/csv/1.0.0/csv/struct.Reader.html#method.read_byte_record)
 method.
 
 {{< high rust >}}
@@ -2070,7 +2070,7 @@ allocated. Thus, we have *amortized allocation*.
 
 An exercise you might consider doing is to use a `StringRecord` instead of a
 `ByteRecord`, and therefore
-[`Reader::read_record`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.Reader.html#method.read_record)
+[`Reader::read_record`](https://docs.rs/csv/1.0.0/csv/struct.Reader.html#method.read_record)
 instead of `read_byte_record`. This will give you easy access to Rust strings
 at the cost of UTF-8 validation but *without* the cost of allocating a new
 `StringRecord` for every record.
@@ -2208,10 +2208,10 @@ a already existing allocation where as a `String` always implies a new
 allocation. In this case, our `&str` is borrowing from the CSV record itself.
 
 The second change we had to make was to stop using the
-[`Reader::deserialize`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.Reader.html#method.deserialize)
+[`Reader::deserialize`](https://docs.rs/csv/1.0.0/csv/struct.Reader.html#method.deserialize)
 iterator, and instead deserialize our record into a `StringRecord` explicitly
 and then use the
-[`StringRecord::deserialize`](https://docs.rs/csv/1.0.0-beta.3/csv/struct.StringRecord.html#method.deserialize)
+[`StringRecord::deserialize`](https://docs.rs/csv/1.0.0/csv/struct.StringRecord.html#method.deserialize)
 method to deserialize a single record.
 
 The second change is a bit tricky, because in order for it to work, our
@@ -2426,7 +2426,7 @@ push you in the right direction.
 
 With that said, here are a few more things you might want to look at:
 
-* The [API documentation for the `csv` crate](https://docs.rs/csv/1.0.0-beta.3/csv/index.html) documents all
+* The [API documentation for the `csv` crate](https://docs.rs/csv/1.0.0/csv/index.html) documents all
   facets of the library, and is itself littered with even more examples.
 * The [`csv-index` crate](https://docs.rs/csv-index) provides data structures
   that can index CSV data that are amenable to writing to disk. (This library
