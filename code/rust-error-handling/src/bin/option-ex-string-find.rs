@@ -21,7 +21,7 @@ fn main_find() {
 }
 
 // Returns the extension of the given file name, where the extension is defined
-// as all characters proceding the first `.`.
+// as all characters succeeding the first `.`.
 // If `file_name` has no `.`, then `None` is returned.
 fn extension_explicit(file_name: &str) -> Option<&str> {
     match find(file_name, '.') {

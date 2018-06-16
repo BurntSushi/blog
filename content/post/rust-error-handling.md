@@ -307,7 +307,7 @@ sense to put it into a function:
 
 {{< code-rust "option-ex-string-find" "3" >}}
 // Returns the extension of the given file name, where the extension is defined
-// as all characters proceding the first `.`.
+// as all characters succeeding the first `.`.
 // If `file_name` has no `.`, then `None` is returned.
 fn extension_explicit(file_name: &str) -> Option<&str> {
     match find(file_name, '.') {
@@ -354,7 +354,7 @@ to get rid of the case analysis:
 
 {{< code-rust "option-ex-string-find" "4" >}}
 // Returns the extension of the given file name, where the extension is defined
-// as all characters proceding the first `.`.
+// as all characters succeeding the first `.`.
 // If `file_name` has no `.`, then `None` is returned.
 fn extension(file_name: &str) -> Option<&str> {
     find(file_name, '.').map(|i| &file_name[i+1..])
