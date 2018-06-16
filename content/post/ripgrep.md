@@ -2460,7 +2460,7 @@ associated with printing matches that it doesn't hit here). Neither `rg` nor
 
 **Description**: This benchmarks how well a search tool can show the context
 around each match. Specifically, in this case, we ask for the two lines
-preceding and proceding every match. We run this benchmark on the English
+preceding and succeeding every match. We run this benchmark on the English
 subtitle corpus. Note that all tools are asked to count lines.
 
 **Pattern**: `Sherlock Holmes` (with `--context 2`)
