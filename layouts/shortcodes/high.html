@@ -1,1 +1,21 @@
-{{ highlight (trim .Inner "\n") (.Get 0) "classprefix=pyg-" }}
+{{ $lang := .Get 0 }}
+{{ $code := trim .Inner "\n" }}
+{{ if eq "rust" $lang }}
+  {{ $labelLine := findRE "(?m)^//[a-z][^\n]*\\.rs$" $code 1 }}
+  {{ if gt (len $labelLine) 0 }}
+    {{ $label := slicestr (index $labelLine 0) 2 }}
+    {{ $label = replaceRE "\\.rs$" "" $label }}
+    <a href="#code-{{ $label }}" id="code-{{ $label }}" class="named-code-name">{{ $label }}</a>
+  {{ end }}
+
+  {{ $code = replaceRE "(?m)^#[^\n]*\n" "" $code }}
+  {{ $code = replaceRE "^//[a-z][^\n]*\n" "" $code }}
+  {{ $code = replaceRE "\n\n\n" "\n\n" $code }}
+  {{ $code = trim $code "\n" }}
+{{ end }}
+{{ highlight $code $lang "classprefix=pyg-" }}
+{{ if gt (len .Params) 1 }}
+  <p style="margin-top: -15px;">
+    <a href="{{ .Get 1 }}">Link to actual code.</a>
+  </p>
+{{ end }}
