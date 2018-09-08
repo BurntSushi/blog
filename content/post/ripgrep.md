@@ -106,52 +106,64 @@ with something I can reproduce, I'd be happy to try and explain it.
 
 Why should you use `ripgrep` over any other search tool? Well...
 
-* It can replace both The Silver Searcher and GNU grep because it is faster
-  than both. (N.B. It is not, strictly speaking, an interface compatible
-  "drop-in" replacement for both, but the feature sets are far more similar
-  than different.)
-* Like The Silver Searcher, `ripgrep` defaults to recursive directory search
-  and won't search files ignored by your `.gitignore` files. It also ignores
-  hidden and binary files by default. `ripgrep` also implements full support
-  for `.gitignore`, where as there are many bugs related to that functionality
-  in The Silver Searcher. Of the things that don't work in The Silver Searcher,
-  `ripgrep`  supports `.gitignore` priority (including in parent directories
-  and sub-directories), whitelisting and recursive globs.
-* `ripgrep` can search specific types of files. For example, `rg -tpy foo`
+* It can replace many use cases served by other search tools
+  because it contains most of their features and is generally faster. (See
+  [the FAQ](https://github.com/BurntSushi/ripgrep/blob/master/FAQ.md#posix4ever)
+  for more details on whether ripgrep can truly replace grep.)
+* Like other tools specialized to code search, ripgrep defaults to recursive
+  directory search and won't search files ignored by your `.gitignore` files.
+  It also ignores hidden and binary files by default. ripgrep also implements
+  full support for `.gitignore`, whereas there are many bugs related to that
+  functionality in other code search tools claiming to provide the same
+  functionality.
+* ripgrep can search specific types of files. For example, `rg -tpy foo`
   limits your search to Python files and `rg -Tjs foo` excludes Javascript
-  files from your search. `ripgrep` can be taught about new file types with
+  files from your search. ripgrep can be taught about new file types with
   custom matching rules.
-* `ripgrep` supports many features found in `grep`, such as showing the context
+* ripgrep supports many features found in `grep`, such as showing the context
   of search results, searching multiple patterns, highlighting matches with
-  color and full Unicode support. Unlike GNU grep, `ripgrep` stays fast while
+  color and full Unicode support. Unlike GNU grep, ripgrep stays fast while
   supporting Unicode (which is always on).
-* `ripgrep` supports searching files in text encodings other than UTF-8, such
+* ripgrep has optional support for switching its regex engine to use PCRE2.
+  Among other things, this makes it possible to use look-around and
+  backreferences in your patterns, which are not supported in ripgrep's default
+  regex engine. PCRE2 support is enabled with `-P`.
+* ripgrep supports searching files in text encodings other than UTF-8, such
   as UTF-16, latin-1, GBK, EUC-JP, Shift_JIS and more. (Some support for
   automatically detecting UTF-16 is provided. Other text encodings must be
   specifically specified with the `-E/--encoding` flag.)
+* ripgrep supports searching files compressed in a common format (gzip, xz,
+  lzma, bzip2 or lz4) with the `-z/--search-zip` flag.
+* ripgrep supports arbitrary input preprocessing filters which could be PDF
+  text extraction, less supported decompression, decrypting, automatic encoding
+  detection and so on.
 
-In other words, use `ripgrep` if you like speed, saner defaults, fewer bugs and
-Unicode.
+In other words, use ripgrep if you like speed, filtering by default, fewer
+bugs and Unicode support.
 
 ### Anti-pitch
 
 I'd like to try to convince you why you *shouldn't* use `ripgrep`. Often, this
 is far more revealing than reasons why I think you *should* use `ripgrep`.
 
-* `ripgrep` uses a regex engine based on finite automata, so if you want fancy
-  regex features such as backreferences or look around, `ripgrep` won't give
-  them to you. `ripgrep` does support lots of things though, including, but not
-  limited to: lazy quantification (e.g., `a+?`), repetitions (e.g., `a{2,5}`),
-  begin/end assertions (e.g., `^\w+$`), word boundaries (e.g., `\bfoo\b`), and
-  support for Unicode categories (e.g., `\p{Sc}` to match currency symbols or
-  `\p{Lu}` to match any uppercase letter).
-* If you need to search compressed files. `ripgrep` doesn't try to do any
-  decompression before searching.
-* `ripgrep` doesn't yet have multiline search.
+Despite initially not wanting to add every feature under the sun to ripgrep,
+over time, ripgrep has grown support for most features found in other
+file searching tools. This includes searching for results spanning across
+multiple lines, and opt-in support for PCRE2, which provides look-around and
+backreference support.
 
-In other words, if you like fancy regexes, multiline search or
-decompressing and searching on-the-fly, then `ripgrep` may not quite meet your
-needs (yet).
+At this point, the primary reasons not to use ripgrep probably consist of one
+or more of the following:
+
+* You need a portable and ubiquitous tool. While ripgrep works on Windows,
+  macOS and Linux, it is not ubiquitous and it does not conform to any
+  standard such as POSIX. The best tool for this job is good old grep.
+* There still exists some other feature (or bug) not listed in this README that
+  you rely on that's in another tool that isn't in ripgrep.
+* There is a performance edge case where ripgrep doesn't do well where another
+  tool does do well. (Please file a bug report!)
+* ripgrep isn't possible to install on your machine or isn't available for your
+  platform. (Please file a bug report!)
 
 ### Installation
 
