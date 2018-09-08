@@ -8,7 +8,7 @@
     <a href="#code-{{ $label }}" id="code-{{ $label }}" class="named-code-name">{{ $label }}</a>
   {{ end }}
 
-  {{ $code = replaceRE "(?m)^#[^\n]*\n" "" $code }}
+  {{ $code = replaceRE "(?m)^#[^\n]*(\n|$)" "" $code }}
   {{ $code = replaceRE "^//[a-z][^\n]*\n" "" $code }}
   {{ $code = replaceRE "\n\n\n" "\n\n" $code }}
   {{ $code = trim $code "\n" }}
