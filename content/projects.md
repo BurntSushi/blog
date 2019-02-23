@@ -208,7 +208,7 @@ These projects just don't fit in the above categories.
 An automatic documentation tool for Python. I think Sphinx is far too
 complicated and too painful to use. `epydoc` was my go to tool for a long time,
 but the code has been abandoned and is not Python 3 compatible. `pdoc` is meant
-to be its replacement. [It's also beautiful.](http://pdoc.burntsushi.net/nfldb)
+to be its replacement.
 
 #### [erd](https://github.com/BurntSushi/erd)
 
