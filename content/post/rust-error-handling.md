@@ -237,7 +237,7 @@ fn find(haystack: &str, needle: char) -> Option<usize> {
 [`find`](http://doc.rust-lang.org/std/primitive.str.html#method.find)
 method from the standard library.)
 
-Notice that when this function finds a matching character, it doen't just
+Notice that when this function finds a matching character, it doesn't just
 return the `offset`. Instead, it returns `Some(offset)`. `Some` is a variant or
 a *value constructor* for the `Option` type. You can think of it as a function
 with the type `fn<T>(value: T) -> Option<T>`. Correspondingly, `None` is also a
