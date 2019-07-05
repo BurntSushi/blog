@@ -122,7 +122,7 @@ protocol.
 #### [TOML](https://github.com/BurntSushi/toml)
 
 An encoder and decoder for [TOML, an ini-like config file
-format](https://github.com/toml/toml). Incidentally, TOML is used to configure
+format](https://github.com/toml-lang/toml). Incidentally, TOML is used to configure
 [Hugo](http://gohugo.io/), which is used to generate this web site.
 
 #### [goim](https://github.com/BurntSushi/goim)
