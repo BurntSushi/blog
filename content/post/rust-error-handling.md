@@ -1549,12 +1549,20 @@ enum CliError {
 }
 {{< /high >}}
 
-And add a new `From` impl:
+To reflect this change we need to update the previous
+`impl From<num::ParseIntError> for CliError` and add the new
+`impl From<num::ParseFloatError> for CliError`:
 
 {{< high "rust" >}}
+impl From<num::ParseIntError> for CliError {
+    fn from(err: num::ParseIntError) -> CliError {
+        CliError::ParseInt(err)
+    }
+}
+
 impl From<num::ParseFloatError> for CliError {
     fn from(err: num::ParseFloatError) -> CliError {
-        CliError::Parse(err)
+        CliError::ParseFloat(err)
     }
 }
 {{< /high >}}
