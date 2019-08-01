@@ -2197,7 +2197,7 @@ We're still doing that here, but what if we wanted to, say, add a `--quiet`
 flag? The `--quiet` flag should silence any verbose output.
 
 Right now, if the program doesn't find a match, it will output a message saying
-so. This can be a little clumbsy, especially if you intend for the program to
+so. This can be a little clumsy, especially if you intend for the program to
 be used in shell scripts.
 
 So let's start by adding the flags. Like before, we need to tweak the usage
