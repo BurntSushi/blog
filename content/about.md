@@ -68,3 +68,15 @@ ZopMATyEQvm8fB/hn7Anvg/efvHMoNasgG4Ia5OEpHygbxrFNn6/5tSK9Yu3RW4=
 =9Fcr
 -----END PGP PUBLIC KEY BLOCK-----
 {{< /high >}}
+
+### Crev ID
+
+The key is pasted below, or it can be downloaded from
+[https://burntsushi.net/stuff/andrewgallant.crev](https://burntsushi.net/stuff/andrewgallant.crev).
+
+{{< high text >}}
+VylyTuk8CMGqIxgHixWaqfiUn3xZyzOA1wFrQ0sR1As
+{{< /high >}}
+
+My proofs repository is here:
+[https://github.com/BurntSushi/crev-proofs](https://github.com/BurntSushi/crev-proofs)
