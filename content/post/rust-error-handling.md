@@ -2266,11 +2266,10 @@ heuristics!
   `unwrap`. Be warned: if it winds up in someone else's hands, don't be
   surprised if they are agitated by poor error messages!
 * If you're writing a quick 'n' dirty program and feel ashamed about panicking
-  anyway, then you should probably use a `failure::Error` from the
-  [`failure`](https://docs.rs/failure) crate as your error type. You can think
-  a [`failure::Error`](https://docs.rs/failure/0.1.1/failure/struct.Error.html)
-  like a `Box<Error>` seen in the examples above, but with attached backtraces
-  and better downcast support.
+  anyway, then you should probably use an `anyhow::Error` from the
+  [`anyhow`](https://docs.rs/anyhow) crate as your error type. You can think
+  an [`anyhow::Error`](https://docs.rs/anyhow/1.0.19/anyhow/struct.Error.html)
+  like a `Box<Error>` seen in the examples above, but with attached backtraces.
 * Otherwise, in a program, define your own error types with appropriate
   [`From`](http://doc.rust-lang.org/std/convert/trait.From.html)
   and
@@ -2291,7 +2290,3 @@ heuristics!
   Using them exclusively can be a bit tiring at times, but I've personally
   found a healthy mix of the `?` operator and combinators to be quite
   appealing. `and_then`, `map` and `unwrap_or` are my favorites.
-
-Looking towards the future, it is possible that the above advice will become
-outdated as the [`failure`](https://docs.rs/failure) crate gains prominence.
-See the [`failure` guide](https://boats.gitlab.io/failure/) for more details.
