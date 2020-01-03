@@ -17,7 +17,7 @@
                 <!--            {{ template "_internal/pagination.html" . }} -->
             </div>
                     {{ else }}
-                        {{ range first 10 .Data.Pages.ByDate.Reverse }}
+                        {{ range (where .Site.RegularPages.ByDate.Reverse "Section" "post") }}
                             {{ if eq .Type "post" }}
                                 {{ .Render "summary"}}
                             {{ end }}
