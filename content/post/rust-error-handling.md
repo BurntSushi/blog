@@ -2266,10 +2266,11 @@ heuristics!
   `unwrap`. Be warned: if it winds up in someone else's hands, don't be
   surprised if they are agitated by poor error messages!
 * If you're writing a quick 'n' dirty program and feel ashamed about panicking
-  anyway, then you should probably use an `anyhow::Error` from the
-  [`anyhow`](https://docs.rs/anyhow) crate as your error type. You can think
-  an [`anyhow::Error`](https://docs.rs/anyhow/1.0.19/anyhow/struct.Error.html)
-  like a `Box<Error>` seen in the examples above, but with attached backtraces.
+  anyway, then you should probably use `Box<Error>`
+  (or `Box<Error + Send + Sync>`) as shown in examples above. Another promising
+  alternative is the [`anyhow`](https://crates.io/crates/anyhow) crate and its
+  `anyhow::Error` type. When using `anyhow`, your errors will automatically
+  have backtraces attached to them when using nightly Rust.
 * Otherwise, in a program, define your own error types with appropriate
   [`From`](http://doc.rust-lang.org/std/convert/trait.From.html)
   and
