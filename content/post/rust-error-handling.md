@@ -29,6 +29,11 @@ use of some standard traits and some very light use of closures and macros.)
 **Update (2018/04/14)**: Examples were converted to `?`, and some text was
 added to give historical context on the change.
 
+**Update (2020/01/03)**: A recommendation to use
+[`failure`](https://crates.io/crates/failure) was removed and replaced with
+a recommendation to use either `Box<Error + Send + Sync>` or
+[`anyhow`](https://crates.io/crates/anyhow).
+
 <!--more-->
 
 
