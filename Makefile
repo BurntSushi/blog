@@ -8,6 +8,9 @@ deploy:
 server:
 	hugo server -D -w --bind '192.168.1.212' -b 'http://192.168.1.212/'
 
+server-local:
+	hugo server -D -w --bind localhost -b 'http://localhost/'
+
 clean:
 	rm -rf tmp
 	rm -f static/images/transducers/{dot,sets,maps}/*.png
