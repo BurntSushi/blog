@@ -302,7 +302,14 @@ me to have a fairly rigid sense of decorum, so some might not consider all of
 these things rude. But I do. Or at least uncouth.
 
 * "Your tool doesn't work [for my niche use case], therefore it is broken."
-* "Just chiming in to say that I would also really like this feature."
+* "Just chiming in to say that I would also really like this feature." (N.B.
+  Some folks seem to be getting hung up on me calling this "rude." Rude is
+  perhaps too strong of a word, but when these sorts of +1s pile up in an
+  issue, it just adds more noisy email notifications and can get annoying.
+  Instead, emoticons or perhaps adding a bit more detail to your specific
+  use case is welcome. But of course, this is pretty minor in the grand
+  scheme of things, and I do see this as partially on me to just let slide
+  more.)
 * Insisting that implementing a feature is "_just_ a simple matter of doing X."
 * Passive aggressiveness when you opt to pass on a feature request.
 * Unconstructively whining about software on [insert social medium here].
