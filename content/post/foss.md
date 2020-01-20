@@ -359,7 +359,7 @@ A long time ago, I was talking to some of my closest friends after they had
 traveled abroad. They had just recently come back to the United States and
 shared a small story of culture shock. The punch line?
 
-> I had never realized how much Americans like to _should_ you to death.
+> I had never realized how much Americans like to **should** you to death.
 
 Now, whether this is actually a property of American culture---or perhaps a
 property of the company we keep---is not a point I wish to belabor. The point
