@@ -66,7 +66,7 @@ of it.
 
 When I write code, I don't need to share it to enjoy it. But as my involvement
 in FOSS increased, it quickly became a natural part of my process that I've
-mostly continued for 16 years in one form or another. At it's core, the thing
+mostly continued for 16 years in one form or another. At its core, the thing
 I love most about it is the act of sharing my code with others in a way that
 lets them solve a problem more efficiently and effectively than they would have
 without it. The more utility my code gets, the greater my enjoyment is. It
@@ -201,14 +201,15 @@ of the wire is important too.
 
 In particular, while I never write the words, "I invite you to use my code,"
 there are a _ton_ of things I do _only_ because my intent is for others to use
-my code. I write more thorough documentation than I would otherwise. I set up
-continuous integration testing. I write a README that usually explains how to
-get started. I share a link to my project with others in various places on the
-Internet. If people accept this invitation to use my code, or an invitation to
-file bugs by keeping the issue tracker open, then I should also do my best not
-to punish them when they do. When poor issues are filed, the reporter probably
-thinks they did the best they could. And so long as they are filed in good
-faith, I really do try to respond in kind.
+my code. I write more thorough documentation than I would otherwise. I write
+examples for others to follow. I set up continuous integration testing. I write
+a README that usually explains how to get started. I share a link to my project
+with others in various places on the Internet. If people accept this invitation
+to use my code, or an invitation to file bugs by keeping the issue tracker
+open, then I should also do my best not to punish them when they do. When poor
+issues are filed, the reporter probably thinks they did the best they could.
+And so long as they are filed in good faith, I really do try to respond in
+kind.
 
 This underscores the asymmetry of maintainers and users. For many users who
 file bug reports, they might have one or two interactions with me. To them, a
@@ -561,4 +562,4 @@ everyone will see them as negatively as I do. _That's okay and expected._ More
 to the point, I am certainly guilty of committing some of those negative
 behaviors myself. We are not perfect and we will never be able to be purely
 empathetic 100% of the time. This is a game of inches and my hope is that we
-can better, even if it's just a little bit.
+can do better, even if it's just a little bit.
