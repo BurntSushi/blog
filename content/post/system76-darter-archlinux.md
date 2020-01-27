@@ -1,5 +1,5 @@
 +++
-date = "2020-01-23T20:41:00-05:00"
+date = "2020-01-27T17:55:00-05:00"
 title = "Archlinux on the System76 Darter Pro"
 author = "Andrew Gallant"
 url = "system76-darter-archlinux"
