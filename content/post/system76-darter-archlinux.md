@@ -200,11 +200,45 @@ out of the box. I solved this relatively easily by adding the following to my
 ```
 
 The keyboard backlight also seemed to work without needing to install any
-drivers. But the keyboard backlight does not appear to have any memory.
+drivers. ~~But the keyboard backlight does not appear to have any memory.
 Instead, I have to fiddle with its brightness and color every time I wake the
 machine or reboot it. I was hoping that installing the system76 drivers from
-the AUR would fix that, but alas, no dice. I ended up installing these (along
-with `linux-headers`):
+the AUR would fix that, but alas, no dice.~~ So it turns out that complaining
+on the Internet can have its upsides.
+[Thanks to Jeremy Soller](https://twitter.com/jeremy_soller/status/1222170053866442753),
+I learned that the keyboard backlight _can_ be programmatically controlled.
+So I wrote this and dropped it at
+`/usr/lib/systemd/system-sleep/system76-darter-hook-sleep`:
+
+```
+#!/bin/sh
+
+# This is a systemd hook script that is run whenever
+# suspend/resume takes place. It should be symlinked into
+# /usr/lib/systemd/system-sleep.
+
+# sys directory that exposes keyboard backlight controls.
+dir="/sys/class/leds/system76_acpi::kbd_backlight"
+
+# $1 is 'pre' (going to sleep) or 'post' (waking up)
+# $2 is 'suspend', 'hibernate' or 'hybrid-sleep'
+case "$1/$2" in
+  pre/*)
+    ;;
+  post/*)
+    sudo sh -c "echo FFA500 > $dir/color"
+    sudo sh -c "echo 255 > $dir/brightness"
+    ;;
+esac
+```
+
+And now my keyboard backlight is automatically set when waking from sleep.
+I added a similar script to my startup script as well. One could imagine
+adding memory pretty simply to this, by simply saving the current state when
+the machine turns off or goes to sleep. But I'm happy with my orange backlight
+turned on at the highest setting all the time.
+
+As for packages I installed (along with `linux-headers`):
 
 ```
 $ pacman -Qs system76
@@ -228,7 +262,9 @@ local/system76-power-git r234.a76dbae-1
 ```
 
 It's not clear exactly what I'm getting out of these things. I may start
-selectively uninstalling this stuff and see what breaks.
+selectively uninstalling this stuff and see what breaks. Indeed,
+[Jeremy Soller from System76 suggests that](https://old.reddit.com/r/System76/comments/ev4jry/archlinux_on_the_system76_darter_pro/fftl66v/)
+some of these won't be necessary once I'm running Linux 5.5.
 
 
 ## Suspend/resume
@@ -365,15 +401,16 @@ than the X11 issue and the wake issue, everything works great.
 As far as the laptop itself goes, I generally like it. It feels sturdy but is
 much slimmer and lighter than my previous laptop. The touchpad feels great,
 although I've been spoiled by a clickable touchpad at work. I love keyboard
-backlights and this one is great, although the lack of memory/programmability
-(AFAIK) kind of stinks. The keyboard itself feels great to type on, and while
-there is some "flex" in the middle of the keyboard, it is not remotely
-noticeable while typing. I can only notice it when I try to press down firmly,
-and even then, it is very slight. I'm not too impressed with the battery life
-so far, but it appears serviceable. It's at least as good as my ThinkPad. The
-laptop doesn't get too warm on my lap unless I'm pegging the CPUs; again, it
-seems on par with the ThinkPad. Rounding out the good parts, I like the screen.
-It's big, bright, crisp and the bezels are small.
+backlights and this one is great, ~~although the lack of memory/programmability
+(AFAIK) kind of stinks~~ especially now that I've learned how to control it
+programmatically. The keyboard itself feels great to type on, and while there
+is some "flex" in the middle of the keyboard, it is not remotely noticeable
+while typing. I can only notice it when I try to press down firmly, and even
+then, it is very slight. I'm not too impressed with the battery life so far,
+but it appears serviceable. It's at least as good as my ThinkPad. The laptop
+doesn't get too warm on my lap unless I'm pegging the CPUs; again, it seems on
+par with the ThinkPad. Rounding out the good parts, I like the screen. It's
+big, bright, crisp and the bezels are small.
 
 There are definitely some things that I don't like about this laptop though.
 
