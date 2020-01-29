@@ -392,6 +392,56 @@ If it turns out that this issue reappears and I can't fix it, then I'll
 probably have to return this laptop. Flawless suspend/resume is table stakes.
 With that said, this very well could be a kernel bug from the looks of things.
 
+**Update**: The System76 support folks have been very helpful. Understandably,
+it's hard for them to help without reproducing issues on `Pop!_OS`. So I booted
+to `Pop!_OS` via a live USB stick and tried suspend/resume. It worked the first
+time, but failed the second time with the exact same thunderbolt error shown
+in `dmesg` on Archlinux:
+
+```
+[  803.725685] thunderbolt 0000:03:00.0: failed to send driver ready to ICM
+```
+
+Since
+[other folks seem to have had the same issue](https://twitter.com/spastorino/status/1222187276891017217),
+I'm holding out hope that this isn't a hardware issue. In my support ticket,
+System76 confirmed that they _thought_ they had actually fixed this in
+`Pop!_OS` and were surprised that I was able to reproduce it. In any case,
+it sounds like they fixed it via a work-around as well: disabling the
+thunderbolt driver on suspend and re-enabling it on resume.
+
+Using our keyboard backlight systemd script from above (saved to
+`/usr/lib/systemd/system-sleep/system76-darter-hook-sleep`), we can just edit
+it to disable and re-enable thunderbolt as appropriate:
+
+```
+#!/bin/sh
+
+# This is a systemd hook script that is run whenever
+# suspend/resume takes place. It should be symlinked into
+# /usr/lib/systemd/system-sleep.
+
+# sys directory that exposes keyboard backlight controls.
+dir="/sys/class/leds/system76_acpi::kbd_backlight"
+
+# $1 is 'pre' (going to sleep) or 'post' (waking up)
+# $2 is 'suspend', 'hibernate' or 'hybrid-sleep'
+case "$1/$2" in
+  pre/*)
+    if lsmod | grep -q thunderbolt; then
+      sudo rmmod thunderbolt
+    fi
+    ;;
+  post/*)
+    sudo sh -c "echo FFA500 > $dir/color"
+    sudo sh -c "echo 255 > $dir/brightness"
+    sudo modprobe thunderbolt
+    ;;
+esac
+```
+
+I am now using this and it seems to work as I'd expect, without any freeze ups.
+
 
 ## General Thoughts
 
