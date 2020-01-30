@@ -443,6 +443,78 @@ esac
 I am now using this and it seems to work as I'd expect, without any freeze ups.
 
 
+## Touch pad
+
+One of the things that I dislike about this laptop is how easily it is for my
+hand to graze the touchpad and cause the mouse to either move or click (when
+tap-to-click is enabled). I do have the disable-touchpad-while-typing feature
+of `libinput` enabled, and this does generally work pretty well. My problem is
+when I'm _not_ typing and my hand moves across the touchpad.
+
+Apparently, there is a thing called _palm detection_ that `libinput` is
+supposed to be doing automatically. And indeed, if some portion of my palm is
+in contact with the touchpad, then palm detection clearly works and the pointer
+does not move or click. That works great.
+
+My problem seems to be that palm detection is not quite tweaked to my liking.
+It turns out that `xinput list-props "SynPS/2 Synaptics TouchPad"` does not
+list any options for tweaking palm detection at all. Moreover, various web
+searches seemed to suggest that `libinput` does not support tweaking palm
+detection thresholds at all.
+
+Thankfully, this is not quite true. `libinput` supports more fine grained
+configuration via its "quirks" system. While there are warnings that the
+available quirks are an unstable interface, I'll take what I can get.
+
+The first step in this process is to determine what threshold works for you.
+I followed the steps for
+[debugging touchpad pressure](https://wayland.freedesktop.org/libinput/doc/latest/touchpad-pressure-debugging.html).
+(I needed to install the `python-pyudev` and `python-libevdev` packages for
+the debug tool to work.) Once you run the program, you'll be able to experiment
+with different ways to touch the touchpad and see which things are registered
+as clicks and which are registered as a palm.
+
+In my opinion, the palm pressure threshold was set way too high. All that was
+remaining was to figure out how to lower this threshold in a persistent
+fashion. The aforementioned link shows how to set quirks, but doesn't indicate
+which setting controls the palm detection threshold. However, the
+[page on device quirks](https://wayland.freedesktop.org/libinput/doc/latest/device-quirks.html#device-quirks)
+does indeed list a `AttrPalmPressureThreshold` setting.
+
+So I added the following to `/etc/libinput/local-overrides.quirks`:
+
+```
+[Touchpad pressure override]
+MatchUdevType=touchpad
+MatchName=*SynPS/2 Synaptics TouchPad
+MatchDMIModalias=dmi:*svnSystem76*pvrdarp6*
+AttrPalmPressureThreshold=70
+```
+
+I then confirmed this config file was being read properly via:
+
+```
+$ libinput quirks list /dev/input/event15
+ModelSynapticsSerialTouchpad=1
+AttrPalmPressureThreshold=70
+```
+
+Then I rebooted and the setting was clearly applied. My touchpad is now _much_
+more sensitive to my palm. Arguably, some might consider `70` to be too
+sensitive. Namely, if I press too much of my fingertips down on the touchpad,
+then it will mistakenly think it is my palm. But I'm happy with that and
+usually only use the tips of my fingertips anyway. Regardless, now that the
+method has been exposed, you're now free to tweak to your heart's desire.
+
+The only complaint I have left is that I wish the two-finger scrolling was a
+bit more sensitive. In order to scroll, my fingers have to travel some distance
+before scrolling actually starts happening. This does not happen on my HP ZBook
+laptop (for work), so I know it's possible. But I don't see any quirks or any
+other `libinput` setting to control this. With that said, this is at best a
+mild annoyance and is easy to live with. Fixing the palm detection was a much
+bigger win.
+
+
 ## General Thoughts
 
 I think the above about covers the Archlinux specifics for this laptop. Other
@@ -469,10 +541,11 @@ be able to adjust the volume quickly and without looking. Having to use the
 `Fn` key does not make that easy. I may wind up just adding some new keybinding
 for this to work around it.
 
-2. As I mentioned above, the fact that the keyboard backlight doesn't
+2. ~~As I mentioned above, the fact that the keyboard backlight doesn't
 have any memory is fairly annoying. I'd be happy if it was programmable in some
 way (I don't think it is?), because then I could add memory myself pretty
-easily and in a way that is customized to my liking.
+easily and in a way that is customized to my liking.~~ As I said above, this
+downside has been mitigated.
 
 3. The keyboard layout is... not great. It is shifted over to the left because
 of the number pad, and this was mentioned as a complaint in some of the scant
@@ -492,7 +565,8 @@ the cursor to move (mildly annoying) or accidentally click something (very
 annoying) because I have tap-to-click enabled. So far, this hasn't been
 frequent enough to be a deal breaker for me, but it's not pleasant. I'd
 probably opt for removing the number pad and shifting the keyboard over and/or
-making the touchpad smaller.
+making the touchpad smaller. N.B. I've been able to mostly mitigate this by
+decreasing the palm detection threshold. See the section above on the touchpad.
 
 5. The touchpad's scroll sensitivity isn't sensitive enough and it doesn't
 appear configurable through libinput. I don't know enough to to know whether
@@ -507,29 +581,6 @@ actually drive me nuts.
 impossible to know its current status at a glance. I may wind up adding
 something to my custom status bar (via `dzen2`) that indicates the current
 state.
-
-After using this laptop more, I've found the random clicks caused by my hand
-while typing (or while my hand is resting on the keyboard) to be very annoying.
-For now, I've disabled tap-to-click. The pointer still moves occasionally, but
-at least I no longer get spurious clicks. I created a quick script to toggle
-tap-to-click for when I want it back:
-
-```
-#!/bin/sh
-
-device="SynPS/2 Synaptics TouchPad"
-prop="libinput Tapping Enabled"
-current="$(
-  xinput list-props "$device" | rg "${prop}[\s()0-9]+:\s+([0-9]+)" -or '$1'
-)"
-if [ "$current" = "0" ]; then
-  xinput set-prop "$device" "$prop" 1
-else
-  xinput set-prop "$device" "$prop" 0
-fi
-```
-
-And then bound it to a keyboard shortcut via `xbindkeys`.
 
 
 ## Conclusion
