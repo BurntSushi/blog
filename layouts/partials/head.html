@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -11,6 +12,10 @@
   <meta name="author" content="">
   <meta name="keywords" content="">
   <link rel="canonical" href="{{ .Permalink }}">
+
+  {{ with .OutputFormats.Get "rss" -}}
+  {{ printf `<link rel="%s" type="%s" href="%s" title="%s" />` .Rel .MediaType.Type .Permalink $.Site.Title | safeHTML }}
+  {{ end -}}
 
   <!-- Custom CSS -->
   <link rel="stylesheet" type="text/css" href="{{ .Site.BaseURL }}css/basscss.css">
