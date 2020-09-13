@@ -914,7 +914,7 @@ how. Don't miss the new `extern crate` lines!
 extern crate csv;
 extern crate serde;
 // This lets us write `#[derive(Deserialize)]`.
-#[macro_use]
+ #[macro_use]
 extern crate serde_derive;
 
 use std::error::Error;
@@ -926,8 +926,8 @@ use std::process;
 //
 // Notice that the field names in this struct are NOT in the same order as
 // the fields in the CSV data!
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
+ #[derive(Debug, Deserialize)]
+ #[serde(rename_all = "PascalCase")]
 struct Record {
     latitude: f64,
     longitude: f64,
@@ -1001,7 +1001,7 @@ We could have fixed this through other means. For example, we could have used
 capital letters in our field names:
 
 {{< high rust >}}
-#[derive(Debug, Deserialize)]
+ #[derive(Debug, Deserialize)]
 struct Record {
     Latitude: f64,
     Longitude: f64,
@@ -1018,7 +1018,7 @@ Another way to fix this is to ask Serde to rename each field individually. This
 is useful when there is no consistent name mapping from fields to header names:
 
 {{< high rust >}}
-#[derive(Debug, Deserialize)]
+ #[derive(Debug, Deserialize)]
 struct Record {
     #[serde(rename = "Latitude")]
     latitude: f64,
@@ -1053,8 +1053,8 @@ Let's start by running our program from the previous section:
 
 {{< high rust >}}
 //tutorial-read-serde-invalid-01.rs
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
+ #[derive(Debug, Deserialize)]
+ #[serde(rename_all = "PascalCase")]
 struct Record {
     latitude: f64,
     longitude: f64,
@@ -1109,8 +1109,8 @@ to a `None` value, as shown in this next example:
 
 {{< high rust >}}
 //tutorial-read-serde-invalid-02.rs
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
+ #[derive(Debug, Deserialize)]
+ #[serde(rename_all = "PascalCase")]
 struct Record {
     latitude: f64,
     longitude: f64,
@@ -1146,7 +1146,7 @@ The only change in this example was adding this attribute to the `population`
 field in our `Record` type:
 
 {{< high rust >}}
-#[serde(deserialize_with = "csv::invalid_option")]
+ #[serde(deserialize_with = "csv::invalid_option")]
 {{< /high >}}
 
 The
@@ -1444,7 +1444,7 @@ code, as shown in the example:
 //tutorial-write-serde-02.rs
 extern crate csv;
 extern crate serde;
-#[macro_use]
+ #[macro_use]
 extern crate serde_derive;
 
 use std::error::Error;
@@ -1452,8 +1452,8 @@ use std::io;
 use std::process;
 
 // Note that structs can derive both Serialize and Deserialize!
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "PascalCase")]
+ #[derive(Debug, Serialize)]
+ #[serde(rename_all = "PascalCase")]
 struct Record<'a> {
     city: &'a str,
     state: &'a str,
@@ -1760,7 +1760,7 @@ Now here's the code:
 //tutorial-pipeline-pop-01.rs
 extern crate csv;
 extern crate serde;
-#[macro_use]
+ #[macro_use]
 extern crate serde_derive;
 
 use std::env;
@@ -1770,8 +1770,8 @@ use std::process;
 
 // Unlike previous examples, we derive both Deserialize and Serialize. This
 // means we'll be able to automatically deserialize and serialize this type.
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "PascalCase")]
+ #[derive(Debug, Deserialize, Serialize)]
+ #[serde(rename_all = "PascalCase")]
 struct Record {
     city: String,
     state: String,
@@ -2088,15 +2088,15 @@ example using Serde in a previous section:
 //tutorial-perf-serde-01.rs
 extern crate csv;
 extern crate serde;
-#[macro_use]
+ #[macro_use]
 extern crate serde_derive;
 
 use std::error::Error;
 use std::io;
 use std::process;
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
+ #[derive(Debug, Deserialize)]
+ #[serde(rename_all = "PascalCase")]
 struct Record {
     country: String,
     city: String,
@@ -2158,8 +2158,8 @@ like:
 
 {{< high rust >}}
 //tutorial-perf-serde-02.rs
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
+ #[derive(Debug, Deserialize)]
+ #[serde(rename_all = "PascalCase")]
 struct Record<'a> {
     country: &'a str,
     city: &'a str,
@@ -2227,8 +2227,8 @@ of `StringRecord`:
 
 {{< high rust >}}
 //tutorial-perf-serde-03.rs
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
+ #[derive(Debug, Deserialize)]
+ #[serde(rename_all = "PascalCase")]
 struct Record<'a> {
     country: &'a [u8],
     city: &'a [u8],
