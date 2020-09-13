@@ -124,7 +124,7 @@ systems may want to jump around. Here's my very brief guide:
     * [Initial setup](#initial-setup)
     * [Argument parsing](#argument-parsing)
     * [Writing the logic](#writing-the-logic)
-    * [Error handling with `Box<Error>`](#error-handling-with-box-error)
+    * [Error handling with `Box<Error>`](#error-handling-with-boxerror)
     * [Reading from stdin](#reading-from-stdin)
     * [Error handling with a custom type](#error-handling-with-a-custom-type)
     * [Adding functionality](#adding-functionality)
