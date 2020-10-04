@@ -794,8 +794,7 @@ of research. Here are two papers that helped me the most:
   Automata](http://www.cs.put.poznan.pl/dweiss/site/publications/download/fsacomp.pdf)
 
 For an excellent but very long and in depth overview of the field, [Jan
-Daciuk's dissertation](http://www.pg.gda.pl/~jandac/thesis.ps.gz) (gzipped
-PostScript warning) is excellent.
+Daciuk's dissertation](http://www.jandaciuk.pl/thesis/) is excellent.
 
 For a short and sweet experimentally motivated overview of construction
 algorithms,
