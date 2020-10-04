@@ -841,7 +841,7 @@ most out of this section, I'd recommend reading the excellent
 book.
 
 Additionally, you may also find it useful to keep the
-[`fst` API documentation](https://burntsushi.net/rustdoc/fst/index.html)
+[`fst` API documentation](https://burntsushi.net/rustdoc/fst/)
 handy, which may act as a nice supplement to the material in this section.
 
 ### Building ordered sets and maps
@@ -971,9 +971,9 @@ let map = Map::from_bytes(fst_bytes).unwrap();
 
 This is pretty much all there is to building ordered sets or maps represented
 by FSTs. There is API documentation for both
-[sets](https://burntsushi.net/rustdoc/fst/struct.SetBuilder.html)
+[sets](https://burntsushi.net/rustdoc/fst/latest/fst/struct.SetBuilder.html)
 and
-[maps](https://burntsushi.net/rustdoc/fst/struct.MapBuilder.html).
+[maps](https://burntsushi.net/rustdoc/fst/latest/fst/struct.MapBuilder.html).
 
 #### A builder shortcut
 
@@ -1095,7 +1095,7 @@ let` here instead of a `for` loop or an iterator adapter, then it is time to
 let you in on a dirty little secret: the `fst` crate doesn't expose iterators.
 Instead, it exposes *streams*. The technical justification is explained at
 length on the [documentation for the `Streamer`
-trait](https://burntsushi.net/rustdoc/fst/trait.Streamer.html).)
+trait](https://burntsushi.net/rustdoc/fst/latest/fst/trait.Streamer.html).)
 
 In this example, we're asking the set for a stream, which lets us iterate over
 all of the keys in the set in order. The stream yields a *reference* to an
@@ -1780,7 +1780,7 @@ fn contains_key(fst: &Fst, key: &[u8]) -> bool {
 
 And that's pretty much all there is to it. The
 [`Node` type has a few more useful
-documented methods](https://burntsushi.net/rustdoc/fst/raw/struct.Node.html)
+documented methods](https://burntsushi.net/rustdoc/fst/latest/fst/raw/struct.Node.html)
 that you may want to peruse.
 
 ## The FST command line tool
