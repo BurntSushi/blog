@@ -23,7 +23,8 @@ cheeseburgers, steak, pizza and buffalo chicken.
 
 I occasionally allow myself to get sucked into pointless debates online.
 
-I live with my wife, Kaitlyn Brady, in Marlborough, MA.
+I live with my wife, Kaitlyn Brady and my son, Murphy Gallant, in
+Marlborough, MA.
 
 ### Contact
 
