@@ -4,3 +4,4 @@ tmp
 go
 tags
 target/
+/.hugo_build.lock
