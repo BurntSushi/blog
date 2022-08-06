@@ -35,7 +35,7 @@ in the API documentation, and is more likely to be updated as time passes.
 
 ## Table of contents
 
-* [csv 1.0 release](#csv-1-0-release)
+* [csv 1.0 release](#csv-10-release)
 * [Setup](#setup)
 * [Basic error handling](#basic-error-handling)
     * [Switch to recoverable errors](#switch-to-recoverable-errors)
