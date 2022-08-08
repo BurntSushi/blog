@@ -49,7 +49,7 @@ different error handling mechanisms, such as exceptions.
 * [When should `unwrap()` be used even if it isn't necessary?](#when-should-unwrap-be-used-even-if-it-isnt-necessary)
 * [Why not use `expect()` instead of `unwrap()`?](#why-not-use-expect-instead-of-unwrap)
 * [Should we lint against uses of `unwrap()`?](#should-we-lint-against-uses-of-unwrap)
-* [Closing thoughts](#closing-thoughts)
+* [Why are panics so great?](#why-are-panics-so-great)
 
 ## What is my position?
 
