@@ -27,6 +27,8 @@ sequence. Each question builds on the one before it.
 
 **Target audience**: Primarily Rust programmers, but I've hopefully provided
 enough context that the principles espoused here apply to any programmer.
+Although it may be tricky to apply an obvious mapping to languages with
+different error handling mechanisms, such as exceptions.
 
 <!--more-->
 
@@ -41,9 +43,9 @@ enough context that the principles espoused here apply to any programmer.
 * [So one should never panic?](#so-one-should-never-panic)
 * [So one should never use `unwrap()` or `expect()`?](#so-one-should-never-use-unwrap-or-expect)
 * [What is a runtime invariant?](#what-is-a-runtime-invariant)
-* [So why not just make all invariants compile-time invariants?](#so-why-not-just-make-all-invariants-compile-time-invariants)
+* [So why not make all invariants compile-time invariants?](#so-why-not-make-all-invariants-compile-time-invariants)
 * [What about when invariants can't be moved to compile time?](#what-about-when-invariants-cant-be-moved-to-compile-time)
-* [Why not just return an error instead of panicking?](#why-not-just-return-an-error-instead-of-panicking)
+* [Why not return an error instead of panicking?](#why-not-return-an-error-instead-of-panicking)
 * [When should `unwrap()` be used even if it isn't necessary?](#when-should-unwrap-be-used-even-if-it-isnt-necessary)
 * [Why not use `expect()` instead of `unwrap()`?](#why-not-use-expect-instead-of-unwrap)
 * [Should we lint against uses of `unwrap()`?](#should-we-lint-against-uses-of-unwrap)
@@ -52,21 +54,22 @@ enough context that the principles espoused here apply to any programmer.
 ## What is my position?
 
 I think it's useful to state up front a number of my positions on error
-handling and panicking. This way, you know exactly where I'm coming from.
+handling and panicking. This way, readers know exactly where I'm coming from.
 
 * Panicking should not be used for error handling in either applications or
 libraries.
 * It is possibly acceptable to use panicking for error handling while
 prototyping, in tests, benchmarks and documentation examples.
-* If a Rust program panics, then it signals a bug in the program.
+* If a Rust program panics, then it signals a bug in the program. That is,
+correct Rust programs don't panic.
 * There is always a way to assign "blame" as to the fault of the panic. It's
 either the fault of the function that panicked, or the fault of the caller of
 that function.
 * Outside of domains that need to use formal methods (or similar) to prove the
 correctness of their programs, it is impossible or impractical to move every
 invariant into the type system.
-* Therefore, when runtime invariants arise, you have a few choices:
-  1. You can make the function partial by causing it to panic on some subset of
+* Therefore, when runtime invariants arise, one has a few choices:
+  1. One can make the function partial by causing it to panic on some subset of
      inputs (i.e., a precondition violation). In this case, if the function
      panics, then the bug is in the caller.
   2. Assume the invariant is never broken and panic when it is (i.e., an
@@ -79,8 +82,10 @@ invariant into the type system.
 * In cases (1) and (2) above, it is fine to use `unwrap()`, `expect()` and
 slice index syntax, among many other things.
 * Prefer `expect()` to `unwrap()`, since it gives more descriptive messages
-when a panic does occur. But use `unwrap()` when `expect()` would just lead to
+when a panic does occur. But use `unwrap()` when `expect()` would lead to
 noise.
+
+The rest of this article will justify these positions.
 
 ## What is `unwrap()`?
 
@@ -122,10 +127,12 @@ should use `unwrap()`.
 When a panic occurs, there are generally one of two things that will happen:
 
 * The process aborts.
-* If the target supports it, the stack unwinds.
+* If the target supports it, the stack unwinds. If the unwinding isn't caught,
+then it will result in the process aborting with a message and an indication of
+the source of the panic.
 
 Which thing happens depends on how the program was compiled. It can be
-controlled via the [`panic`][cargo-panic] profile setting in your `Cargo.toml`.
+controlled via the [`panic`][cargo-panic] profile setting in the `Cargo.toml`.
 
 When unwinding occurs, it is possible to [catch the panic][catch-unwind] and
 do something with it. For example, a web server might catch panics that occur
@@ -135,12 +142,14 @@ other tests may be executed and the results pretty printed instead of bringing
 down the entire harness immediately.
 
 While panics can be used for error handling, it is generally regarded as a poor
-form of error handling. Notably, the language does not have good support for it
-and, crucially, unwinding is not guaranteed to occur.
+form of error handling. Notably, the language does not have good support for
+using panics as error handling and, crucially, unwinding is not guaranteed to
+occur.
 
-When a panic causes unwinding that is never caught, your program will likely
+When a panic causes unwinding that is never caught, the program will likely
 abort once the entire stack has been unwound and print the message carried by
-the object in the panic. For example:
+the object in the panic. (I say "likely" because one can set panic handlers and
+panic hooks.) For example:
 
 ```rust
 fn main() {
@@ -199,9 +208,9 @@ note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 The error message isn't totally useless in this scenario, but it doesn't
 include the file path and it doesn't include any surrounding context informing
 the user of what the application was trying to do when it ran into an I/O
-error. It also contains a lot of noise that just isn't useful to an end user.
+error. It also contains a lot of noise that isn't useful to an end user.
 
-So in summary:
+In summary:
 
 * Panics are great for programmers. They give a message, a stack trace and
 line numbers. They are, on their own, often enough information to diagnose
@@ -212,16 +221,16 @@ written specifically for programmers.
 
 ## What is error handling?
 
-Error handling is what you do in your code when something "goes wrong." Without
-getting too deep into this, there are a few different ways to handle errors in
-Rust:
+Error handling is what one does in one's code when something "goes wrong."
+Without getting too deep into this, there are a few different ways to handle
+errors in Rust:
 
-1. You can abort with a non-zero exit code.
-2. You can panic with the error. It might abort the process. It might not. As
+1. One can abort with a non-zero exit code.
+2. One can panic with the error. It might abort the process. It might not. As
 described in the previous section, it depends on how the program was compiled.
-3. You can handle errors as normal values, typically with `Result<T, E>`. If an
-error bubbles all the way up to your `main` function, you might
-[print the error to `stderr`][ripgrep-main] and then abort.
+3. One can handle errors as normal values, typically with `Result<T, E>`. If an
+error bubbles all the way up to the `main` function, one might [print the error
+to `stderr`][ripgrep-main] and then abort.
 
 All three are perfectly valid error handling strategies. The problem is that
 the first two lead to a very poor user experience for applications in the
@@ -262,7 +271,7 @@ those unfamiliar with Rust, I'll break it down:
   [the "question mark operator" section of the Rust reference][question-mark]
   for more details.)
 
-The end result is that if you pass an invalid value to the `--warmup-time`
+The end result is that if one passes an invalid value to the `--warmup-time`
 flag, then the error message will include `--warmup-time`:
 
 ```
@@ -276,19 +285,26 @@ Caused by:
 This makes it clear which part of the input provided by the user was
 problematic.
 
+(Note: `anyhow` is great for application oriented code, but if one is building
+a library intended for others to use, I'd suggest writing out concrete error
+types and providing an appropriate [`std::fmt::Display`][std-fmt-display] impl.
+The [`thiserror`][thiserror] crate removes some of the boiler plate involved in
+doing that, but I'd skip it to avoid the procedural macro dependencies if one
+isn't already using procedural macro dependencies for something else.)
+
 ## Should `unwrap()` be used for error handling?
 
 It is somewhat common to see `unwrap()` used for error handling in the
 following three scenarios:
 
-1. Quick one-off programs, prototyping or programs you might write just for
-yourself. Since the only end user is the programmer of the application, panics
+1. Quick one-off programs, prototyping or programs one might write for personal
+use. Since the only end user is the programmer of the application, panics
 aren't necessarily a bad user experience.
 2. In tests. In general, Rust tests fail if they panic and pass if they don't
 panic. So `unwrap()` in that context is quite all right, since it's likely that
-a panic is exactly what you want anyway. Do note that you can
+a panic is exactly what one wants anyway. Do note that one can
 [return `Result` from unit tests][result-in-tests], which permits using `?`
-in your tests, for example.
+in tests, for example.
 3. In documentation examples. In the past, it used to be quite a bit more
 work to treat errors as values instead of using panics in documentation
 examples. These days though, [`?` can be used in doctests][result-in-docs].
@@ -299,33 +315,33 @@ them:
 
 1. Even in quick programs or programs only built for myself, I treat errors as
 values. `anyhow` makes this incredibly simple. Just `cargo add anyhow` and then
-use `fn main() -> anyhow::Result<()>`. That's it. There's just no huge
-ergonomic advantage to using panicking for error handling in this context.
-`anyhow` will even emit backtraces.
+use `fn main() -> anyhow::Result<()>`. That's it. There's no huge ergonomic
+advantage to using panicking for error handling in this context. `anyhow` will
+even emit backtraces.
 2. I liberally use `unwrap()` in tests. I rarely if ever use `?` in unit tests.
 This might be because I started writing Rust before unit tests could return
-`Result<T, E>`. I've just never seen a compelling advantage to change what I'm
-doing here and writing out longer signatures.
+`Result<T, E>`. I've never seen a compelling advantage to change what I'm doing
+here and writing out longer signatures.
 3. I have generally gravitated toward treating errors as values instead of
-panicking in documentation examples. In particular, all you have to do is add
+panicking in documentation examples. In particular, all one has to do is add
 `# Ok::<(), Box<dyn std::error::Error>>(())` to the bottom of most examples,
-and now you can use `?`. It's easy to do and shows code that tends to be more
-idiomatic. With that said, *real* error handling tends to add context to
-errors. I would consider that idiomatic, yet I don't do it in documentation
-examples. Additionally, documentation examples tend to be targeting the
-demonstration of some particular facet of an API, and expecting them to be
-perfectly idiomatic in every other aspect---especially if it distracts focus
-from the point of the example---seems unrealistic. So generally, I think
-`unwrap()` in documentation is okay, but I've been gravitating away from it
-because it's easy to do.
+and now `?` can be used in examples. It's easy to do and shows code that
+tends to be more idiomatic. With that said, *real* error handling tends
+to add context to errors. I would consider that idiomatic, yet I don't do
+it in documentation examples. Additionally, documentation examples tend
+to be targeting the demonstration of some particular facet of an API, and
+expecting them to be perfectly idiomatic in every other aspect---especially
+if it distracts focus from the point of the example---seems unrealistic.
+So generally, I think `unwrap()` in documentation is okay, but I've been
+gravitating away from it because it's easy to do.
 
 So, in summary, I'd say "do not use `unwrap()` for error handling in Rust" is
 a fine first approximation. But reasonable people can disagree over whether to
 use `unwrap()` in some scenarios (as discussed above) due to its terseness.
 
 With that said, I believe it is uncontroversial to state that `unwrap()` should
-not be used for error handling in Rust libraries or applications that you
-intend for others to use. That's a value judgment. You can disagree with it,
+not be used for error handling in Rust libraries or applications that are
+intended for others to use. That's a value judgment. One can disagree with it,
 but I think it would be hard to argue that using `unwrap()` for error handling
 leads to a good user experience. Therefore, I think most folks are aligned
 here: `unwrap()`, and more generally, panicking, is not an adequate method of
@@ -335,7 +351,7 @@ error handling in Rust.
 
 The ["Error Handling" chapter in the Rust Book][rust-book-error-handling]
 popularized the idea of thinking about errors as "recoverable" versus
-"unrecoverable." That is, if an error is "recoverable" then you should treat
+"unrecoverable." That is, if an error is "recoverable" then one should treat
 it as a normal value and use `Result<T, E>`. On the other hand, if an error is
 unrecoverable then it's okay to panic.
 
@@ -349,12 +365,12 @@ function because a documented precondition is not upheld, then the fault is
 with the caller of the function. Otherwise, the fault is with the
 implementation of that function.
 
-That's all you need to know to determine whether to treat errors as values or
+That's all one needs to know to determine whether to treat errors as values or
 to treat them as panics. Some examples:
 
-* Is it a bug if your program couldn't open a file at a path specified by the
+* Is it a bug if the program couldn't open a file at a path specified by the
 end user? Nope. So treat this as an error value.
-* Is it a bug if your program couldn't build a regular expression from a static
+* Is it a bug if the program couldn't build a regular expression from a static
 string literal? Yup. The programmer typed that regex. It should be correct. So
 a panic is appropriate.
 
@@ -362,12 +378,11 @@ a panic is appropriate.
 
 Generally, yes, correct Rust programs should not panic.
 
-Does this mean that if you've used panicking for error handling in a
-quick Rust "script" that it is therefore not correct? [David Tolnay has
+Does this mean that if panicking was used for error handling in a quick
+Rust "script" that it is therefore not correct? [David Tolnay has
 suggested][david-and-russell] that this borders on a form of [Russell's
-paradox][russell-paradox], and I tend to agree with him. Alternatively, you can
-think of your script or prototype as having bugs that you would mark as
-`wontfix`.
+paradox][russell-paradox], and I tend to agree with him. Alternatively, one can
+think of the script or prototype as having bugs that are marked as `wontfix`.
 
 ## So one should never use `unwrap()` or `expect()`?
 
@@ -391,11 +406,11 @@ a different set of people who do actually literally mean ["don't use
 existed in the first place][never-unwrap]. This is triply confused by yet
 another set of people that say "don't use `unwrap()`," but actually mean,
 "don't use `unwrap()`, `expect()`, slice indexing or any other panicking
-routine even if you prove that panicking is impossible."
+routine even if one proves that panicking is impossible."
 
 In other words, there are really two problems I'm trying to address in this
 post. One is the problem of determining when one should use `unwrap()`. The
-other is the problem of communication. This just happens to be an area where
+other is the problem of communication. This happens to be an area where
 imprecision leads to what *appears* to be strangely inconsistent advice.
 
 ## What is a runtime invariant?
@@ -423,21 +438,23 @@ size in memory as a `usize`.)
 In this case, if one needs an invariant like "an integer that is never zero,"
 then utilizing a type like `NonZeroUsize` is a very compelling choice with
 few downsides. It does introduce a little noise in the code when needing to
-actually use the integer, since you have to call `get()` to get an actual
-`usize`, and you probably need an actual `usize` to do things like arithmetic
+actually use the integer, since one has to call `get()` to get an actual
+`usize`, and an actual `usize` is probably needed to do things like arithmetic
 or use it to index slices.
 
-## So why not just make all invariants compile-time invariants?
+## So why not make all invariants compile-time invariants?
 
-In some cases, you just can't. We'll cover that in the next section.
+In some cases, it can't be done. We'll cover that in the next section.
 
-In other cases, you _can_, but choose not to for some reason. One such reason
-is API complexity.
+In other cases, it _can_ be done, but one chooses not to for some reason. One
+such reason is API complexity.
 
 Consider one real world example from my [`aho-corasick`][aho-corasick]
-crate. Its [`AhoCorasick::find_overlapping_iter`][ac-overlap] method
-panics if the `AhoCorasick` automaton wasn't built, at runtime, with
-a ["match kind" of "standard"][ac-match-kind]. In other words, the
+crate (which provides an implementation of the
+[Aho-Corasick algorithm][wiki-aho-corasick]). Its
+[`AhoCorasick::find_overlapping_iter`][ac-overlap] method panics
+if the `AhoCorasick` automaton wasn't built, at runtime, with a
+["match kind" of "standard"][ac-match-kind]. In other words, the
 `AhoCorasick::find_overlapping_iter` routine imposes a documented precondition
 on the caller to promise to only call it when `AhoCorasick` was built in a
 certain way. I did it this way for a few reasons:
@@ -461,27 +478,27 @@ still want to have normal non-overlapping search routines, just like
 that accept any kind of Aho-Corasick automaton and run a non-overlapping
 search. In that case, either the `aho-corasick` crate or the programmer using
 the crate needs to define some kind of generic abstraction to enable that. Or,
-more likely, perhaps just copy some code.
+more likely, perhaps copy some code.
 
-I thus made a _judgment_ that having just one type that can do everything---but
+I thus made a _judgment_ that having one type that can do everything---but
 might fail loudly for certain methods under certain configurations---would be
 best. The API design of `aho-corasick` isn't going to result in subtle logic
-errors that silently produce incorrect results. If you get it wrong, you're
-still going to get a panic with a clear message. At that point, the fix will be
-easy.
+errors that silently produce incorrect results. If a mistake is made, then the
+caller is still going to get a panic with a clear message. At that point, the
+fix will be easy.
 
-In exchange, you get an overall simpler API. There is only one type you can use
-to search with. You don't need to answer questions like, "wait which type do I
-want? Now I have to go understand both and try to fit the puzzle pieces
-together." And if you need to write one generic routine that accepts any
-automaton and does a non-overlapping search, well, you don't need to actually
-use generics for it. Because there is only one type.
+In exchange, we get an overall simpler API. There is only one type that can be
+used to search with. One needn't to answer questions like, "wait which type
+do I want? Now I have to go understand both and try to fit the puzzle pieces
+together." And if one wants to write a single generic routine that accepts any
+automaton and does a non-overlapping search, well, it doesn't need generics.
+Because there is only one type.
 
 ## What about when invariants can't be moved to compile time?
 
 Consider how one might implement a search using a deterministic finite
 automaton (DFA). A basic implementation is only a few lines, so it's easy to
-just include it here:
+include it here:
 
 ```rust
 type StateID = usize;
@@ -528,32 +545,32 @@ reason.
 
 How would one guarantee, at compile time, that a panic will never occur given
 the arithmetic and slice accesses? Keep in mind that the `transitions` and
-`is_match_id` vectors might be built from user input. So however you do it, you
+`is_match_id` vectors might be built from user input. So however it's done, one
 can't rely on the compiler knowing the inputs to the DFA. The input from which
-the DFA was built might just be an arbitrary string.
+the DFA was built might be an arbitrary regex pattern.
 
-There's just no feasible way to push the invariant to compile time. It has to
-be a runtime invariant. And who is responsible for maintaining that invariant?
-The implementation that builds the DFA and the implementation that uses the
-DFA to execute a search. Both of those things need to be in agreement with
-one another. In other words, they share a secret: how the DFA is laid out
-in memory. (Caveat: I have been wrong about the impossibility of pushing
-invariants into the type system before. I admit to the possibility here, my
-imagination is not great. However, I am fairly certain that doing so would
-entail quite a bit of ceremony and/or be limited in its applicability. Still
-though, it would be an interesting exercise even if it doesn't fully fit the
-bill.)
+There's no feasible way to push the invariant that the DFA is constructed and
+searched correctly to compile time. It has to be a runtime invariant. And who
+is responsible for maintaining that invariant? The implementation that builds
+the DFA and the implementation that uses the DFA to execute a search. Both of
+those things need to be in agreement with one another. In other words, they
+share a secret: how the DFA is laid out in memory. (Caveat: I have been wrong
+about the impossibility of pushing invariants into the type system before.
+I admit to the possibility here, my imagination is not great. However, I am
+fairly certain that doing so would entail quite a bit of ceremony and/or be
+limited in its applicability. Still though, it would be an interesting exercise
+even if it doesn't fully fit the bill.)
 
-If anything panicked, what would that mean? It *has* to mean that there is a
-bug in the code. And since the documentation of this routine guarantees that it
-never panics, the problem has to be with the implementation. It's either in how
-the DFA was built or it's in how the DFA is being searched.
+If anything panicked, what would that mean? It *has* to mean that there is
+a bug in the code somewhere. And since the documentation of this routine
+guarantees that it never panics, the problem has to be with the implementation.
+It's either in how the DFA was built or it's in how the DFA is being searched.
 
-## Why not just return an error instead of panicking?
+## Why not return an error instead of panicking?
 
-It's true. Instead of panicking when there's a bug, you could just return an
-error. The `is_match` function from the previous section can be rewritten to
-return an error instead of panicking:
+Instead of panicking when there's a bug, one could return an error. The
+`is_match` function from the previous section can be rewritten to return an
+error instead of panicking:
 
 ```rust
 // Returns true if the DFA matches the entire 'haystack'.
@@ -584,31 +601,31 @@ fn is_match(&self, haystack: &[u8]) -> Result<bool, &'static str> {
 }
 ```
 
-Notice just how much more complicated this function got. And notice how
-ham-fisted the documentation is. Who writes things like "these docs are totally
-wrong if the implementation is buggy"? Have you seen that in any
-non-experimental library? It makes zero sense. And why return an error if your
-docs guarantee that an error will never be returned? To be clear, you *might*
-want to do that for API evolution reasons (i.e., "maybe some day it will return
-an error"), but this routine will never return an error under any circumstances
-in any possible future scenario.
+Notice how much more complicated this function got. And notice how ham-fisted
+the documentation is. Who writes things like "these docs are totally wrong
+if the implementation is buggy"? Have you seen that in any non-experimental
+library? It doesn't make much sense. And why return an error if the docs
+guarantee that an error will never be returned? To be clear, one *might* want
+to do that for API evolution reasons (i.e., "maybe some day it will return an
+error"), but this routine will never return an error under any circumstances in
+any possible future scenario.
 
 What is the benefit of a routine like this? If we were to [steelman][steelman]
 advocates in favor of this style of coding, then I think the argument is
 probably best limited to certain high reliability domains. I personally don't
-have a ton of experience in said domains, but I can totally imagine cases where
-you really do not want to have any panicking branches in your final compiled
-binary anywhere. That gives you a lot of assurance about just what kind of
-state your code is in at any given point. It also means that you probably can't
-use Rust's standard library or most of the core ecosystem crates, since they
-are all going to have panicking branches somewhere in them. In other words,
-it's a very expensive coding style.
+have a ton of experience in said domains, but I can imagine cases where one
+does not want to have any panicking branches in the final compiled binary
+anywhere. That gives one a lot of assurance about what kind of state one's code
+is in at any given point. It also means that one probably can't use Rust's
+standard library or most of the core ecosystem crates, since they are all going
+to have panicking branches somewhere in them. In other words, it's a very
+expensive coding style.
 
 The really interesting bit to this coding style---pushing runtime invariants
 into error values---is that it's actually impossible to properly document the
 error conditions. Well documented error conditions *relate the input to a
-function* to some failure case in some way. But you literally can't do that for
-this function, because if you could, you would be documenting your own bug!
+function* to some failure case in some way. But one literally can't do that for
+this function, because if one could, one would be documenting a bug!
 
 ## When should `unwrap()` be used even if it isn't necessary?
 
@@ -645,9 +662,9 @@ impl Alternation {
 }
 ```
 
-You see that `self.asts.pop().unwrap()` bit there? That will panic if
-`self.asts` is empty. But since we just checked that its length is non-zero, it
-cannot be empty, and thus the `unwrap()` will never panic.
+The `self.asts.pop().unwrap()` snippet will panic if `self.asts` is empty. But
+since we checked that its length is non-zero, it cannot be empty, and thus the
+`unwrap()` will never panic.
 
 But why use `unwrap()` here? We could actually write it without `unwrap()` at
 all:
@@ -677,13 +694,13 @@ building the alternation.
 
 The rewritten code lacks `unwrap()`, which is an advantage, but it's circuitous
 and strange. The original code is much simpler, and it is trivial to observe
-that the `unwrap()` will just never lead to a panic.
+that the `unwrap()` will never lead to a panic.
 
 ## Why not use `expect()` instead of `unwrap()`?
 
 `expect()` is like `unwrap()`, except it accepts a message parameter and
 includes that message in the panic output. In other words, it adds a little
-extra context to a panic message should it occur.
+extra context to a panic message if a panic occurs.
 
 I think it is a good idea to generally recommend the use of `expect()` over
 `unwrap()`. However, I do not think it's a good idea to ban `unwrap()`
@@ -736,23 +753,23 @@ comes in the form of comments. The comments explain why the `from_str_radix`
 and `from_u32` operations will never fail. The `expect()` message just gives an
 additional hint that makes the panic message slightly more useful.
 
-Whether to use `unwrap()` or `expect()` just comes down to a judgment call. In
-the `into_ast()` example above, I think `expect()` just adds pointless noise,
-because the surrounding code so trivially shows why the `unwrap()` is okay. In
-that case, there isn't even any point in writing a comment saying as much.
+Whether to use `unwrap()` or `expect()` comes down to a judgment call. In the
+`into_ast()` example above, I think `expect()` adds pointless noise, because
+the surrounding code so trivially shows why the `unwrap()` is okay. In that
+case, there isn't even any point in writing a comment saying as much.
 
 There are other ways that `expect()` adds noise. Some examples:
 
 ```rust
-Regex::new(r"...").expect("a valid regex");
+Regex::new("...").expect("a valid regex");
 mutex.lock().expect("an unpoisoned mutex");
 slice.get(i).expect("a valid index");
 ```
 
 My contention is that none of these really add any signal to the code, and
 actually make the code more verbose and noisy. If a `Regex::new` call fails
-with a static string literal, then you actually already get a nice error
-message. For example, consider this program:
+with a static string literal, then a nice error message is already printed. For
+example, consider this program:
 
 ```rust
 fn main() {
@@ -777,14 +794,14 @@ error: Unicode property not found
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrac
 ```
 
-Basically, at a certain point, just writing the same `expect()` message over
-and over again for the same common operations just becomes a tedious exercise.
-Instead, good judgment should be employed to determine whether to use
-`unwrap()` or `expect()` in any given situation.
+Basically, at a certain point, writing the same `expect()` message over and
+over again for the same common operations becomes a tedious exercise. Instead,
+good judgment should be employed to determine whether to use `unwrap()` or
+`expect()` in any given situation.
 
 (Note: with respect to the `Regex` example, some people say that an invalid
-regex in a string literal should result in your program failing to compile.
-Clippy actually has a lint for that, but in general, it's just not possible for
+regex in a string literal should result in the program failing to compile.
+Clippy actually has a lint for that, but in general, it's not possible for
 `Regex::new` to do that via Rust's `const` facilities. If it were to be
 possible, then most of the Rust language would need to be usable inside a const
 context. One could write a procedural macro instead, but `Regex::new` would
@@ -793,9 +810,9 @@ still need to exist.)
 ## Should we lint against uses of `unwrap()`?
 
 One common argument against the idea of using good judgment is that it *can*
-be nice to remove human judgment from the equation. If you lint against
-`unwrap()`, then you *force* every programmer to write something other than
-`unwrap()`. The thinking goes that if you force this step, then programmers
+be nice to remove human judgment from the equation. If one lints against
+`unwrap()`, then one *forces* every programmer to write something other than
+`unwrap()`. The thinking goes that if one forces this step, then programmers
 might think more deeply about whether their code can panic or not than they
 would otherwise. Needing to write `expect()` and come up with a message, I
 agree, exercises more brain cells and probably does result in folks thinking
@@ -814,21 +831,26 @@ Secondly, `unwrap()` *is* idiomatic. To be clear, I am making a descriptive
 statement. I am not saying it *ought* to be idiomatic. I'm saying that it
 already is, based on its widespread usage in both the standard library and core
 ecosystem crates. It's not just widespread in my own code. This *suggests* that
-`unwrap()` isn't actually problematic in practice, although I recognize that
-claim has some confounding factors.
+`unwrap()` isn't problematic in practice, although I recognize that claim has
+some confounding factors.
 
 Thirdly, there are *many* common things that can panic but don't require
 writing `unwrap()`:
 
-* Slice index syntax. For example, `slice[i]` panics. When `i` is out of
-bounds, the panic message is a bit better than what you would normally see
-with `unwrap()`, but still, a panic will result. If one bans `unwrap()` because
-it's easy to thoughtlessly write, should one therefore also ban slice index
-syntax?
+* Slice index syntax. For example, `slice[i]` panics when `i` is out of bounds.
+The panic message is a bit better than what one would normally see with
+`slice.get(i).unwrap()`, but still, a panic will result. If one bans `unwrap()`
+because it's easy to thoughtlessly write, should one therefore also ban slice
+index syntax?
 * Overflow in arithmetic operations currently wraps in release mode, but it
 panics in debug mode. It is possible that it will panic in release mode in the
 future. If one bans `unwrap()` because it's easy to thoughtlessly write, should
-one therefore also ban the use of fundamental operators like `+` and `*`?
+one therefore also ban the use of fundamental operators like `+` and `*`? (That
+it doesn't panic in release mode today doesn't mean bugs don't occur in release
+mode! It's likely that arithmetic silently wrapping will probably lead to a
+bug. So why not ban it and force folks to use, for example, `wrapping_add` and
+`checked_add` everywhere instead? Remember, we're not trying to avoid panics.
+We're trying to avoid bugs.)
 * When using `RefCell` for interior mutability, its methods `borrow()` and
 `borrow_mut()` will panic if a borrowing violation occurs at runtime. The same
 argument applies here.
@@ -837,38 +859,36 @@ process. Which is even worse than a panic. (Although, my understanding is that
 it's desirable for failed allocations to panic and not abort.) Does this mean
 one should be more cautious about allocations too?
 
-The obvious hole here is, well, don't let perfect be the enemy of the good.
-Just because we can't or won't lint against every other thing that can panic,
-that doesn't mean we shouldn't try to improve the situation by linting against
-`unwrap()`. But I would argue that things like slice index syntax are common
-enough that banning `unwrap()` won't make an appreciable difference.
+The obvious hole in my argument is "don't let perfect be the enemy of the
+good." Just because we can't or won't lint against every other thing that can
+panic, that doesn't mean we shouldn't try to improve the situation by linting
+against `unwrap()`. But I would argue that things like slice index syntax and
+arithmetic operators are common enough that banning `unwrap()` won't make an
+appreciable difference.
 
 Fourthly and finally, banning `unwrap()` gives some non-zero probability to the
-possibility that folks will just start writing `expect("")` instead. Or
-`expect("no panic")` if `expect("")` is banned. I'm sure most folks are
-familiar with lints that inspire that sort of behavior. How many times have you
-seen a comment for a function `frob_quux` that said "This frob's quux." That
-comment is probably only there because a lint told the programmer to put it
-there.
+possibility that folks will start writing `expect("")` instead. Or `expect("no
+panic")` if `expect("")` is banned. I'm sure most folks are familiar with lints
+that inspire that sort of behavior. How many times have you seen a comment for
+a function `frob_quux` that said "This frob's quux"? That comment is probably
+only there because a lint told the programmer to put it there.
 
 But as I said, I understand reasonable people can disagree here. I do not have
 a bullet proof argument against linting `unwrap()`. I just happen to think the
 juice isn't worth the squeeze.
 
-## Closing thoughts
+## Why are panics so great?
 
-Panics are one of the great things about Rust. They are the singular reason
-why bugs often don't require running Rust programs in a debugger. Why? Because
-a lot of bugs result in a panic and because panics give you stack traces and
-line numbers, one of the most important things (but not the only thing) that
-a debugger gives you. Their greatness extends beyond that. If a Rust program
-panics in the hands of an end user, they can hand you that panic and can
-probably stomach setting `RUST_BACKTRACE=1` to get a full stack trace. That's
-an easy thing to do and is especially useful in contexts where a reproduction
-is difficult to obtain.
+Panics are the singular reason why bugs often don't require running Rust
+programs in a debugger. Why? Because a lot of bugs result in a panic and
+because panics give stack traces and line numbers, one of the most important
+things (but not the only thing) that a debugger provides. Their greatness
+extends beyond that. If a Rust program panics in the hands of an end
+user, they can share that panic message and can probably stomach setting
+`RUST_BACKTRACE=1` to get a full stack trace. That's an easy thing to do and is
+especially useful in contexts where a reproduction is difficult to obtain.
 
-Because panics are so useful, it makes sense to use them to your advantage
-where you can:
+Because panics are so useful, it makes sense to use them wherever possible:
 
 * Use `assert!` (and related macros) to aggressively check preconditions and
 runtime invariants. When checking preconditions, make sure the panic message
@@ -877,18 +897,18 @@ example, `assert!(!xs.is_empty(), "expected parameter 'xs' to be non-empty")`.
 * Use `expect()` when including a message adds meaningful context to the panic
 message. If `expect()` is associated with a precondition, then the importance
 of a clear panic message goes up.
-* Use `unwrap()` when `expect()` would just add noise.
+* Use `unwrap()` when `expect()` would add noise.
 * Use other things like slice index syntax when an invalid index implies a bug
 in the program. (Which is very usually the case.)
 
 Of course, when possible, pushing runtime invariants to compile-time invariants
-is generally preferred. Then you don't have to worry about `unwrap()` or
+is generally preferred. Then one doesn't have to worry about `unwrap()` or
 `assert!` or anything else. The invariant is maintained by virtue of the
 program compiling. Rust is exceptionally well suited to pushing a lot of
 runtime invariants to compile-time invariants. Indeed, its entire mechanism of
 maintaining memory safety depends crucially on it.
 
-Sometimes though, as shown above, it is just either not always possible or not
+Sometimes though, as shown above, it is either not always possible or not
 always desirable to push invariants into the type system. In that case, be
 happy to panic.
 
@@ -916,3 +936,6 @@ happy to panic.
 [regex-syntax-snippet]: https://github.com/rust-lang/regex/blob/159a63c85eb77ec321301bc4c4ebfb90343edc2b/regex-syntax/src/ast/mod.rs#L551-L573
 [regex-syntax-expect]: https://github.com/rust-lang/regex/blob/159a63c85eb77ec321301bc4c4ebfb90343edc2b/regex-syntax/src/ast/parse.rs#L1527-L1562
 [rust-book-error-handling]: https://doc.rust-lang.org/book/ch09-00-error-handling.html
+[std-fmt-display]: https://doc.rust-lang.org/std/fmt/trait.Display.html
+[thiserror]: https://docs.rs/thiserror/1.*/
+[wiki-aho-corasick]: https://en.wikipedia.org/wiki/Aho%E2%80%93Corasick_algorithm
