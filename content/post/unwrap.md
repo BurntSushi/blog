@@ -1,5 +1,5 @@
 +++
-date = "2022-08-06T18:25:00-04:00"
+date = "2022-08-08T09:00:00-04:00"
 title = "Using unwrap() in Rust is Okay"
 author = "Andrew Gallant"
 url = "unwrap"
