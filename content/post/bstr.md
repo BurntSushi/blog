@@ -289,7 +289,7 @@ use bstr::{io::BufReadExt, ByteSlice};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let needle = "Affiliate";
-    for result in std::io::BufReader::new(std::io::stdin()).byte_lines() {
+    for result in std::io::stdin().lock().byte_lines() {
         let line = result?;
         // '[T]::contains' is already defined in std and is not
         // substring search, so bstr defines it under a new name and
@@ -427,7 +427,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
     let shiftor = ShiftOr::new("Sushi")?;
-    let mut rdr = std::io::BufReader::new(std::io::stdin().lock());
+    let mut rdr = std::io::stdin().lock();
     let mut line = String::new();
     loop {
         line.clear();
@@ -523,7 +523,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
     let shiftor = ShiftOr::new("Sushi")?;
-    let mut rdr = std::io::BufReader::new(std::io::stdin().lock());
+    let mut rdr = std::io::stdin().lock();
     let mut line = Vec::new();
     loop {
         line.clear();
@@ -587,7 +587,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
     let needle = "Sushi";
-    let mut rdr = std::io::BufReader::new(std::io::stdin().lock());
+    let mut rdr = std::io::stdin().lock();
     let mut line = String::new();
     loop {
         line.clear();
@@ -614,7 +614,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
     let needle = "Sushi";
-    let mut rdr = std::io::BufReader::new(std::io::stdin().lock());
+    let mut rdr = std::io::stdin().lock();
     let mut line = Vec::new();
     loop {
         line.clear();
@@ -677,7 +677,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
     let searcher = bstr::Finder::new("Sushi");
-    let mut rdr = std::io::BufReader::new(std::io::stdin().lock());
+    let mut rdr = std::io::stdin().lock();
     let mut line = Vec::new();
     loop {
         line.clear();
@@ -729,7 +729,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
     let searcher = bstr::Finder::new("Sushi");
-    let mut rdr = std::io::BufReader::new(std::io::stdin().lock());
+    let mut rdr = std::io::stdin().lock();
     rdr.for_byte_line_with_terminator(|line| {
         if searcher.find(line).is_some() {
             std::io::stdout().write_all(line.as_bytes())?;
@@ -917,7 +917,7 @@ use bstr::{io::BufReadExt, ByteSlice};
 fn main() -> anyhow::Result<()> {
     let config = Config::parse(std::env::args_os())?;
     let (mut chars, mut words, mut lines) = (0, 0, 0);
-    let mut bufrdr = io::BufReader::new(io::stdin().lock());
+    let mut bufrdr = io::stdin().lock();
     bufrdr.for_byte_line_with_terminator(|line| {
         lines += 1;
         if config.chars {
@@ -1138,7 +1138,7 @@ use bstr::io::BufReadExt;
 fn main() -> anyhow::Result<()> {
     let config = Config::parse(std::env::args_os())?;
     let searcher = bstr::Finder::new(&config.needle);
-    let mut bufrdr = io::BufReader::new(io::stdin().lock());
+    let mut bufrdr = io::stdin().lock();
     let mut wtr = termcolor::StandardStream::stdout(ColorChoice::Auto);
     let mut lineno = 0;
     bufrdr.for_byte_line(|line| {
@@ -1239,7 +1239,7 @@ use termcolor::{ColorChoice, WriteColor};
 ///   badutf8 < stdin
 ///   foo ... | badutf8
 fn main() -> anyhow::Result<()> {
-    let mut bufrdr = io::BufReader::new(io::stdin().lock());
+    let mut bufrdr = io::stdin().lock();
     let mut wtr = termcolor::StandardStream::stdout(ColorChoice::Auto);
     let mut lineno = 0;
     bufrdr.for_byte_line(|mut line| {
