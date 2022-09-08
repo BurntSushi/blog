@@ -1421,6 +1421,6 @@ API and catching mistakes.
 [lopopolo]: https://github.com/lopopolo
 [regex-bytes]: https://docs.rs/regex/1.*/regex/bytes/index.html
 [aho-corasick]: https://docs.rs/aho-corasick/0.7.*/aho_corasick/
-[memchr]: https://docs.rs/memchr/.*/memchr/
+[memchr]: https://docs.rs/memchr/1.*/memchr/
 [regex-streams]: https://github.com/rust-lang/regex/issues/425
 [unix-os-str-ext]: https://doc.rust-lang.org/std/os/unix/ffi/trait.OsStrExt.html#tymethod.as_bytes
