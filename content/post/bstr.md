@@ -1333,7 +1333,7 @@ case of multi-line searches. You're kind of stuck. Your choices are:
 (**Note**: A similar problem exists with running regex or glob searches on
 file paths. You can [get the underlying bytes of a file path to search on
 Unix][unix-os-str-ext] without any additional cost, but on Windows, you're
-pretty much forced to pay some kind of cost because the internet WTF-8
+pretty much forced to pay some kind of cost because the internal WTF-8
 representation used by `Path` is hidden.)
 
 These are all pretty bad choices. The last one in particular will force you to
