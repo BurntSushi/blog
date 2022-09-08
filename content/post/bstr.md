@@ -414,7 +414,7 @@ are the precise commands to generate the haystack:
 $ git clone https://github.com/rust-lang/rust
 $ cd rust
 $ git checkout b44197abb0b3ffe4908892e1e08ab1cd721ff3b9
-$ find ./ -regex '[^ ]+\.rs' | sort | xargs cat > /tmp/rust.rs
+$ find ./ -regex '[^ ]+\.rs' | LC_ALL=C sort | xargs cat > /tmp/rust.rs
 $ for ((i=0; i<5; i++)); do cat /tmp/rust.rs; done > /tmp/rust.5x.rs
 ```
 
