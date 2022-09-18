@@ -1780,7 +1780,7 @@ fn contains_key(fst: &Fst, key: &[u8]) -> bool {
 
 And that's pretty much all there is to it. The
 [`Node` type has a few more useful
-documented methods](https://burntsushi.net/rustdoc/fst/raw/struct.Node.html)
+documented methods](https://burntsushi.net/rustdoc/fst/latest/fst/raw/struct.Node.html)
 that you may want to peruse.
 
 ## The FST command line tool
