@@ -323,7 +323,7 @@ extensions.
 ### Regex syntax
 
 The syntax supported is
-[documented as part of Rust's regex library](https://doc.rust-lang.org/regex/regex/index.html#syntax).
+[documented as part of Rust's regex library](https://docs.rs/regex/1.*/regex/#syntax).
 
 ## Anatomy of a grep
 
