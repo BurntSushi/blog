@@ -977,7 +977,7 @@ fn main() {
 }
 {{< /code-rust >}}
 
-Reasonable people can disagree over whether this code is better that the code
+Reasonable people can disagree over whether this code is better than the code
 that uses combinators, but if you aren't familiar with the combinator approach,
 this code looks simpler to read to me. It uses explicit case analysis with
 `match` and `if let`. If an error occurs, it simply stops executing the
