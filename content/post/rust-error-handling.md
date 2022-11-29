@@ -83,8 +83,7 @@ systems may want to jump around. Here's my very brief guide:
   languages ("algebraic data types" and "combinators" make you feel warm and
   fuzzy), then you can probably skip right over the basics and start by
   skimming [multiple error types](#working-with-multiple-error-types), and work
-  you're way into a full read of
-  [standard library error
+  your way into a full read of [standard library error
   traits](#standard-library-traits-used-for-error-handling).
   (Skimming [the basics](#the-basics) might be a good idea to just get a feel
   for the syntax if you've really never seen Rust before.)
