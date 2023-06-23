@@ -218,6 +218,7 @@ abbr {
 
 pre, code {
   font-family: monospace;
+  background: #f0f0f0;
 }
 
 code {
@@ -236,6 +237,10 @@ table.highlighttable, pre {
   border: 1px solid #000;
   width: 100%;
   border-spacing: 0;
+}
+
+table.highlighttable, pre, pre code {
+  background: #f8f8f8;
 }
 
 table.highlighttable div.highlight {
