@@ -359,7 +359,7 @@ I will use `regex-cli` at points thoughout this blog post, so if you'd like to
 follow along, you can install it straight from the `regex` crate repository:
 
 ```
-$ cargo install --git https://github.com/rust-lang/regex regex-cli
+$ cargo install regex-cli
 ```
 
 Here's a pair of examples that shows the impact that Unicode has on the
