@@ -1520,7 +1520,7 @@ of the regex engines into a single engine.
 But why have so many regex engines? The reason is essentially engineering: the
 implementation of regex engines with more functionality tends to search more
 slowly than regex engines that have less functionality. We could use only a
-single regex engine that supports all the functionality we want, namly the
+single regex engine that supports all the functionality we want, namely the
 [`PikeVM`], but the search performance would likely be disappointing to a lot
 of users. This fundamentally drives the addition of other engines. None of
 the other engines can support the full range of functionality provided by the
