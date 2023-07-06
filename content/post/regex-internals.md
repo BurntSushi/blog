@@ -1785,7 +1785,7 @@ our regex by disabling Unicode mode:
 use regex_automata::nfa::thompson::backtrack::BoundedBacktracker;
 
 fn main() {
-    let re = BoundedBacktracker::new(r"\b\w+\b").unwrap();
+    let re = BoundedBacktracker::new(r"(?-u)\b\w+\b").unwrap();
     println!("{:?}", re.max_haystack_len());
 }
 ```
