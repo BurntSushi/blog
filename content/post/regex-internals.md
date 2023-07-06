@@ -1254,15 +1254,15 @@ minimal DFAs because of the memory usage required, but instead sacrifice strict
 minimality in favor of using a bounded amount of memory. But it's usually close
 enough.
 
-The reverse case is not as easy. The reverse case cannot be handled so easily
-because there is no simple way to reverse sort the output of the `utf8` module
-in a way that works with Daciuk's algorithm (as far as I know). To work around
-this, I built a bespoke data structure called a [range trie] that re-partitions
-the output of the `utf8` module in reverse such that it's sorted and non-overlapping.
-Once this is done, we can use Daciuk's algorithm just like we do for forward
-case. The problem, though, is that this can increase the time it takes to build
-an NFA quite a bit. Because of that, one needs to opt into it. First, without
-the reverse shrinkng:
+The reverse case cannot be handled so easily because there is no simple way to
+reverse sort the output of the `utf8` module in a way that works with Daciuk's
+algorithm (as far as I know). To work around this, I built a bespoke data
+structure called a [range trie] that re-partitions the output of the `utf8`
+module in reverse such that it's sorted and non-overlapping. Once this is done,
+we can use Daciuk's algorithm just like we do for forward case. The problem,
+though, is that this can increase the time it takes to build an NFA quite a
+bit. Because of that, one needs to opt into it. First, without the reverse
+shrinkng:
 
 ```
 $ regex-cli debug thompson --no-table --no-captures '\w' -r | tail -n20
