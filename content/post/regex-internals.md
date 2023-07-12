@@ -978,7 +978,7 @@ used for an unanchored search.
 An unanchored search starts with `binary-union(2, 1)`. This indicates that
 NFA traversal should first go to state `2` (a `capture` state), and only if
 that path fails should it try going to state `1`. In this case, state `1`
-matches any byte and loops back around to state `2`. In effect, states `0` and
+matches any byte and loops back around to state `0`. In effect, states `0` and
 `1` represent an implicit `(?s-u:.)*?` prefix at the beginning of the regex,
 effectively making it possible for it to match anywhere in the haystack.
 
