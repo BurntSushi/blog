@@ -18,8 +18,8 @@ I enjoy most mainstream American sports; particularly football. I'm a big
 Patriots fan. [My passion for football has met my passion for
 programming.](https://github.com/BurntSushi/nfldb)
 
-My favorite cigar is the Liga Privada No. 9 and my favorite foods consist of
-cheeseburgers, steak, pizza and buffalo chicken.
+My favorite cigar is the Padron 1964 #4 (maduro) and my favorite foods consist
+of cheeseburgers, steak, pizza and buffalo chicken.
 
 I occasionally allow myself to get sucked into pointless debates online.
 
