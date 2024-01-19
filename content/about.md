@@ -2,12 +2,11 @@
 title = "About Me"
 +++
 
-My name is Andrew Gallant and
-[I'm a programmer](https://github.com/BurntSushi). I work as a systems
-engineer for Salesforce in Cambridge, MA where I get to work on a variety of
-things from machine learning algorithms to core infrastructure and user facing
-applications. The vast majority of my free time is spent hacking on
-[side projects](/projects/).
+My name is Andrew Gallant and [I'm a
+programmer](https://github.com/BurntSushi). I work as a programmer for
+[Astral](https://astral.sh/), where I get to help improve the state of Python's
+developer tooling. A big chunk of my free time is spent hacking on [side
+projects](/projects/).
 
 You may find me in other mediums under the handle `burntsushi` or
 `burntsushi5`.
