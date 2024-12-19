@@ -1,4 +1,4 @@
-baseURL = "https://blog.burntsushi.net/"
+baseURL = "https://burntsushi.net/"
 languageCode = "en-us"
 title = "Andrew Gallant's Blog"
 pygmentsUseClasses = true

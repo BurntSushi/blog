@@ -3,7 +3,7 @@ all:
 
 deploy:
 	hugo
-	rscp public/ bs:/home/ubuntu/www/burntsushi.net/blog
+	rscp public/ bs:/home/ubuntu/www/burntsushi.net/site/blog
 
 server:
 	hugo server -D -w --bind '192.168.1.213' -b 'http://192.168.1.213/'
