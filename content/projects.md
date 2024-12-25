@@ -26,6 +26,12 @@ speed of GNU grep. I wrote a blog post detailing a benchmark and how I achieved
 such high performance:
 [ripgrep is faster than {grep, ag, git grep, ucg, pt, sift}](/ripgrep/).
 
+#### [jiff](https://github.com/BurntSushi/jiff)
+
+A date-time library that encourages you to jump into the
+pit of success. This library is heavily inspired by the
+[Temporal](https://tc39.es/proposal-temporal/docs/index.html) project.
+
 #### [QuickCheck](https://github.com/BurntSushi/quickcheck)
 
 This was my first Rust project. If you've never heard of QuickCheck before,
@@ -122,7 +128,7 @@ protocol.
 #### [TOML](https://github.com/BurntSushi/toml)
 
 An encoder and decoder for [TOML, an ini-like config file
-format](https://github.com/toml-lang/toml). Incidentally, TOML is used to 
+format](https://github.com/toml-lang/toml). Incidentally, TOML is used to
 configure [Hugo](http://gohugo.io/), which is used to generate this web site.
 
 #### [goim](https://github.com/BurntSushi/goim)
