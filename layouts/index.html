@@ -14,7 +14,6 @@
             </div>
             <div class="paginatin_area">
                         {{ partial "pagination.html" . }}
-                <!--            {{ template "_internal/pagination.html" . }} -->
             </div>
                     {{ else }}
                         {{ range (where .Site.RegularPages.ByDate.Reverse "Section" "post") }}
