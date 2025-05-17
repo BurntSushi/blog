@@ -347,6 +347,14 @@ leads to a good user experience. Therefore, I think most folks are aligned
 here: `unwrap()`, and more generally, panicking, is not an adequate method of
 error handling in Rust.
 
+**Added on 2025-05-17**: While not my common practice, others have reported
+that another common use of `unwrap()` is temporary. That is, some programmers
+write `unwrap()` while trying to figure out how to solve a problem. Later,
+perhaps before submitting a patch, they come back around, remove the `unwrap()`
+and add "proper" error handling. This is totally valid. It may be useful to
+mark such `unwrap()` instances with a `TODO` comment or a `.expect("TODO")` to
+make sure you remember to address them later.
+
 ## What about "recoverable" vs "unrecoverable" errors?
 
 The ["Error Handling" chapter in the Rust Book][rust-book-error-handling]
@@ -887,6 +895,12 @@ extends beyond that. If a Rust program panics in the hands of an end
 user, they can share that panic message and can probably stomach setting
 `RUST_BACKTRACE=1` to get a full stack trace. That's an easy thing to do and is
 especially useful in contexts where a reproduction is difficult to obtain.
+
+**Added on 2025-05-17**: Note that this is not meant to be comparison with
+errors. The point of emphasis here is that _when_ a bug occurs, you should feel
+very happy when it manifests as a panic. They tend to be much easier to debug
+than a subtle logic error, for example. If you want backtraces and line numbers
+with error values, then the `thiserror` and `anyhow` crates provide that.
 
 Because panics are so useful, it makes sense to use them wherever possible:
 
