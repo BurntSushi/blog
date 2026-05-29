@@ -3,9 +3,3 @@ languageCode = "en-us"
 title = "Andrew Gallant's Blog"
 pygmentsUseClasses = true
 pygmentsUseClassic = false
-# pygmentsstyle = "autumn"  # not actually used
-
-[params]
-author = "Andrew Gallant"
-google_analytics_id = "UA-5095052-2"
-description = "I blog mostly about my own programming projects."
