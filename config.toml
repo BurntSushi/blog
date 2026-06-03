@@ -1,5 +1,11 @@
 baseURL = "https://burntsushi.net/"
-languageCode = "en-us"
+locale = "en-us"
 title = "Andrew Gallant's Blog"
 pygmentsUseClasses = true
 pygmentsUseClassic = false
+ignoreLogs = ["warning-goldmark-raw-html"]
+disableKinds = ["taxonomy", "term", "section"]
+
+[params.author]
+name = "Andrew Gallant"
+email = "jamslam@gmail.com"
