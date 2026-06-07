@@ -10,7 +10,7 @@ plainIdAnchors = true
 I was recently diagnosed with [anti-NMDA receptor encephalitis]. It is
 an autoimmune disorder where your body's normally helpful antibodies
 [start acting strangely]. This leads to inflammation in the brain. This
-short blog briefly discusses some of my experience and prognosis.
+blog briefly discusses some of my experience and prognosis.
 
 **Target audience**: Anyone relying on my work for their own projects.
 
