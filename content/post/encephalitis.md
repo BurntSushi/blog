@@ -119,6 +119,9 @@ time was unwavering and I'm not sure what would have happened without them.
 
 Happy hacking.
 
+This blog is also
+[published on Encephalitis International][encephalitis-international].
+
 [anti-NMDA receptor encephalitis]: https://en.wikipedia.org/wiki/Anti-NMDA_receptor_encephalitis
 [start acting strangely]: https://en.wikipedia.org/wiki/Anti-NMDA_receptor_encephalitis#Pathophysiology
 [chronic jaw pain]: https://en.wikipedia.org/wiki/Temporomandibular_joint_dysfunction
@@ -142,3 +145,4 @@ Happy hacking.
 [movie adaptation (as of June 2026) available for free on YouTube]: https://www.youtube.com/watch?v=zsJ3rePEu0Y
 [catatonia]: https://en.wikipedia.org/wiki/Catatonia
 [Charlie Marsh]: https://github.com/charliermarsh
+[encephalitis-international]: https://www.encephalitis.info/story/anti-nmdar-autoimmune-encephalitis-andrews-story/
