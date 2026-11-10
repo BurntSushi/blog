@@ -6,7 +6,7 @@ deploy:
 	rscp public/ burntsushi.net:/home/ubuntu/www/burntsushi.net/site/blog
 
 server:
-	hugo server -D -w --bind '192.168.1.213' -b 'http://192.168.1.213/'
+	hugo server -D -w --bind '192.168.1.214' -b 'http://192.168.1.214/'
 
 server-local:
 	hugo server -D -w --bind localhost -b 'http://localhost/'
