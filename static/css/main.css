@@ -219,6 +219,7 @@ abbr {
 pre, code {
   font-family: monospace;
   background: #f0f0f0;
+  font-size: 90%;
 }
 
 code {
