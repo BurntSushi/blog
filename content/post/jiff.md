@@ -1,5 +1,5 @@
 +++
-date = "2026-11-09T16:55:00-05:00"
+date = "2026-11-15T15:00:00-05:00"
 title = "A datetime library for Rust"
 url = "jiff"
 
@@ -22,16 +22,18 @@ This blog announces the Jiff 1.0 release by giving a tour of its API.
 
 ## Table of Contents
 
+* [The Jiff 1.0 Commitment](#the-jiff-10-commitment)
 * [Introduction](#introduction)
   * [Follow Along](#follow-along)
+  * [Terms](#terms)
   * [The DateTime Onion](#the-datetime-onion)
   * [Defining a time zone](#defining-a-time-zone)
   * [Durations](#durations)
   * [When should I use Jiff?](#when-should-i-use-jiff)
 * [Parsing and Formatting](#parsing-and-formatting)
   * [`FromStr` and `Display`](#fromstr-and-display)
-  * [`strptime` and `strftime`](#strptime-and-strftime)
   * [The "friendly" Duration Format](#the-friendly-duration-format)
+  * [`strptime` and `strftime`](#strptime-and-strftime)
   * [The `jiff::fmt` module](#the-jifffmt-module)
   * [Locale Sensitive Formatting via ICU4X Integration](#locale-sensitive-formatting-via-icu4x-integration)
 * [Date Manipulation](#date-manipulation)
@@ -39,9 +41,24 @@ This blog announces the Jiff 1.0 release by giving a tour of its API.
   * [Date Arithmetic](#date-arithmetic)
   * [Date Rounding](#date-rounding)
   * [Other Calendars](#other-calendars)
-* [Motivation](#motivation)
-* [Inspiration](#inspiration)
-* [The Jiff 1.0 Commitment](#the-jiff-10-commitment)
+  * [Which DateTime Type Do I Use?](#which-datetime-type-do-i-use)
+* [Span Manipulation](#span-manipulation)
+* [Conclusion](#conclusion)
+  * [Motivation](#motivation)
+  * [Inspiration](#inspiration)
+
+## The Jiff 1.0 Commitment
+
+Jiff is already used in production in many projects: uv, Cargo, Starship, fd,
+Nushell, mise, Jujutsu, uutils/coreutils and even as the basis for a Temporal
+implementation in AWS LLRT. It is time to call it 1.0.
+
+Unless some significant defect is found in Jiff's API, my plan is to commit
+to Jiff 1.0 indefinitely. This is important because the intent is for Jiff
+to be an ecosystem building block that appears in the public API of other
+libraries. This makes Jiff an attractive _public_ dependency, which means
+semver incompatible releases are likely to cause significant pain in the
+ecosystem. They will not be made lightly.
 
 ## Introduction
 
@@ -569,9 +586,9 @@ primarily on interoperability via the following:
 * [RFC 3339] specifies a format for fixed offset instants in time, in terms of
 a human readable civil datetime. For example, `2026-11-12T15:36:00-05:00`. This
 is the serialization format used by [`Timestamp`].
-* [RFC 9557] supersedes RFC 3339 to add time zone information. For example,
-`2026-11-12T15:36:00-05:00[America/New_York]`. This is the serialization format
-used by [`ZonedDateTime`].
+* [RFC 9557] extends and updates RFC 3339 to add time zone information.
+For example, `2026-11-12T15:36:00-05:00[America/New_York]`. This is the
+serialization format used by [`ZonedDateTime`].
 * [ISO 8601] covers mostly everything else, including durations and
 civil datetimes. For example, `P5Y3MT20H` is an ISO 8601 duration and
 `2026-11-12T15:30:00` is an ISO 8601 civil datetime whose corresponding instant
@@ -1084,6 +1101,26 @@ invalid. It should only be used with inputs that are known to be valid.
 It would, for example, be inappropriate to use this with user provided values.
 Because of the `const` block above, if you try to provide invalid values,
 you'll get a compiler error.
+
+For datetime types that represent an instant in time (i.e., `ZonedDateTime` and
+`Timestamp`), there is also a `now()` constructor for getting the current time:
+
+```rust
+use jiff::{Timestamp, ZonedDateTime};
+
+fn main() -> anyhow::Result<()> {
+    let now = Timestamp::now();
+    println!("{now}");
+    // Example output: 2026-11-15T14:17:21.80099287Z
+
+    // This will automatically fetch your system's configured time zone.
+    let now = ZonedDateTime::now();
+    println!("{now}");
+    // Example output: 2026-11-15T09:17:21.80102125-05:00[America/New_York]
+
+    Ok(())
+}
+```
 
 In addition to constructors, new date values can be constructed from old
 date values using the `Date::with` API:
@@ -1609,7 +1646,256 @@ fn main() -> anyhow::Result<()> {
 
 The ICU4X API supports [many more calendars][ICU4X calendars].
 
-## Motivation
+### Which DateTime Type Do I Use?
+
+There are 3 potentially confusable datetime types in Jiff:
+
+* [`civil::DateTime`]
+* [`Timestamp`]
+* [`ZonedDateTime`]
+
+When should you use each one versus the other?
+
+To a first approximation, if you _can_ use a `ZonedDateTime`, then that is
+probably the type you want to reach for. It represents a specific instant in
+time in a particular geographic location. That is, it has both a `Timestamp`
+and a [`TimeZone`].
+
+If you only ever need to work in UTC or just deal with system time, then a
+`Timestamp` is probably the right choice. This is useful for representing a
+specific instant in time that is not connected to any time zone.
+
+A `civil::DateTime` is useful in contexts where you don't care about a specific
+instant in time and when calcuations should be done independent of time zone.
+For example, when parsing datetime information from a user interface datetime
+picker.
+
+Remember that both a `civil::DateTime` and a `Timestamp` can be converted to a
+`ZonedDateTime` by supplying a time zone.
+
+## Span Manipulation
+
+We've already seen how to add spans to datetime values and how to get spans
+as a difference between datetime values. But we haven't yet explored the APIs
+available on a `Span` itself.
+
+First and foremost, we can build a `Span` through its constructor, which
+returns a `Span` with all of its units set to `0`:
+
+```rust
+use jiff::Span;
+
+let span = Span::new();
+```
+
+A `Span` is both `Copy` and immutable. We can create new spans through method
+chaining:
+
+```rust
+let span = Span::new().hours(1).minutes(30);
+assert_eq!(span.to_string(), "PT1H30M");
+```
+
+Or we can use the `ToSpan` convenience trait, which adds methods on integer
+types for constructing spans:
+
+```rust
+use jiff::ToSpan;
+
+let span = 1.hour().minutes(30);
+assert_eq!(span.to_string(), "PT1H30M");
+```
+
+Note though that methods like `Span::hours` and `ToSpan::hours` will panic
+when the integer is outside the limits of what `Span` supports. This is fine
+when your spans are literals in your program, since a panic would indicate a
+bug. But if your inputs come from an end user, it's better to use fallible
+methods:
+
+```rust
+let span = Span::new().try_hours(1)?.try_minutes(30)?;
+assert_eq!(span.to_string(), "PT1H30M");
+```
+
+Spans preserve each individual unit value. This means that 90 minutes and 1
+hour 30 minutes, while they represent the same duration, are actually different
+values in memory:
+
+```rust
+let span1 = 1.hour().minutes(30);
+let span2 = 90.minutes();
+assert_eq!(span1.to_string(), "PT1H30M");
+assert_eq!(span2.to_string(), "PT90M");
+```
+
+This permits callers maximum flexibility when it comes to representing
+durations. This makes it possible to represent durations in a specific unit
+even when they add up to larger units. For example, the runtime duration of
+films is typically conveyed in minutes, even when the runtime exceeds one hour.
+This can be adjusted programmatically using `Span::round`:
+
+```rust
+use jiff::{SpanRound, ToSpan, Unit};
+
+fn main() -> anyhow::Result<()> {
+    let span1 = 1.hour().minutes(30);
+    let span2 = span1.round(SpanRound::new().largest(Unit::Minute))?;
+    assert_eq!(span2.to_string(), "PT90M");
+
+    Ok(())
+}
+```
+
+You can go the other way as well:
+
+```rust
+use jiff::{SpanRound, ToSpan, Unit};
+
+fn main() -> anyhow::Result<()> {
+    let span1 = 90.minutes();
+    let span2 = span1.round(SpanRound::new().largest(Unit::Hour))?;
+    assert_eq!(span2.to_string(), "PT1H30M");
+
+    Ok(())
+}
+```
+
+Neither of these examples do actual rounding, despite the name of the API.
+Instead, since we're only setting the largest unit, this API is doing unit
+balancing. Unit balancing is when all unit values rollover into larger units
+up until the largest configured unit. This works even for calendar units too,
+but you need to provide a relative date:
+
+```rust
+use jiff::{civil, SpanRound, ToSpan, Unit};
+
+fn main() -> anyhow::Result<()> {
+    let span = 2756.hours();
+    let dt = civil::date(2020, 1, 1).at(0, 0, 0, 0);
+    let round = SpanRound::new().largest(Unit::Year).relative(dt);
+    assert_eq!(span.round(round)?.to_friendly(), "3mo 23d 20h");
+    Ok(())
+}
+```
+
+Without a relative date, it's not possible to know how many hours are in a
+single month. That is, once calendar units are involved, a span cannot be
+interpreted as a physical duration of time until some context is applied.
+
+The same even applies to days themselves, since days can sometimes be more or
+less than 24 hours. Take the above example. What happens if we use a zoned
+datetime as our relative date instead?
+
+```rust
+use jiff::{civil, SpanRound, ToSpan, Unit};
+
+fn main() -> anyhow::Result<()> {
+    let span = 2756.hours();
+    let zdt = civil::date(2020, 1, 1).at(0, 0, 0, 0).in_tz("Europe/Rome")?;
+    let round = SpanRound::new().largest(Unit::Year).relative(&zdt);
+    assert_eq!(span.round(round)?.to_friendly(), "3mo 23d 21h");
+    Ok(())
+}
+```
+
+Notice that the duration's hour component changed from `20` to `21`. Why?
+Because we started with 2756 hour in both cases and because `2020-03-29` in
+Rome was only 23 hours long (in a move from standard time to daylight saving
+time). That means that one of those days in `3mo 23d` was only 23 hours long.
+So an extra hour needed to be added to make up for it.
+
+The `round` API can also do actual rounding:
+
+```rust
+use jiff::{SpanRound, ToSpan, Unit};
+
+fn main() -> anyhow::Result<()> {
+    let span = 2.hours().minutes(30);
+    let round = SpanRound::new().smallest(Unit::Hour);
+    assert_eq!(span.round(round)?.to_friendly(), "3h");
+    Ok(())
+}
+```
+
+You can also change its rounding mode from the default ("half-expand", or like
+you were taught rounding in school) to truncation (or one of several other
+modes):
+
+```rust
+use jiff::{RoundMode, SpanRound, ToSpan, Unit};
+
+fn main() -> anyhow::Result<()> {
+    let span = 2.hours().minutes(30);
+    let round = SpanRound::new().smallest(Unit::Hour).mode(RoundMode::Trunc);
+    assert_eq!(span.round(round)?.to_friendly(), "2h");
+    Ok(())
+}
+```
+
+One can also specify a rounding increment to round to the nearest unit value.
+For example, to the nearest half-hour:
+
+```rust
+use jiff::{SpanRound, ToSpan, Unit};
+
+fn main() -> anyhow::Result<()> {
+    let span = 2.hours().minutes(31);
+    let round = SpanRound::new().smallest(Unit::Minute).increment(30);
+    assert_eq!(span.round(round)?.to_friendly(), "2h 30m");
+    Ok(())
+}
+```
+
+Because a `Span` value cannot easily be compared correctly based purely on its
+value in memory, a dedicated comparison [`Span::compare`] routine is provided:
+
+```rust
+let span1 = 2.hours();
+let span2 = 120.minutes();
+assert!(span1.compare(span2)?.is_eq());
+```
+
+Also, one can convert a `Span` to a floating point value in terms of any unit.
+For example:
+
+```rust
+use jiff::{ToSpan, Unit};
+
+fn main() -> anyhow::Result<()> {
+    let span = 90.minutes();
+    assert_eq!(span.total(Unit::Hour)?, 1.5);
+    Ok(())
+}
+```
+
+Converting to calendar units requires a relative date for the same reasons
+discussed above:
+
+```rust
+use jiff::{civil, ToSpan, Unit};
+
+fn main() -> anyhow::Result<()> {
+    let span = 24.hours();
+    assert_eq!(
+        span.total((Unit::Month, civil::date(2026, 6, 1)))?,
+        0.03333333333333333
+    );
+    assert_eq!(
+        span.total((Unit::Month, civil::date(2026, 7, 1)))?,
+        0.03225806451612903
+    );
+    Ok(())
+}
+```
+
+## Conclusion
+
+So far, we've explored a good chunk of Jiff's API. We didn't talk about every
+nook and cranny, but I think we've covered the most important pieces.
+
+We'll wrap up by briefly discussing motivation and inspiration.
+
+### Motivation
 
 Whenever I needed datetime handling in Rust, I always got confused. Should I
 use `chrono` or `time`? How do I get my local time from a timestamp? How do I
@@ -1632,7 +1918,7 @@ Jiff's [design] and [comparison] documentation contain much more detail
 regarding the motivation and specific examples between Jiff, `chrono` and
 `time`.
 
-## Inspiration
+### Inspiration
 
 Jiff is heavily inspired by [Temporal], which is JavaScript's standard library
 solution for date and time management. Jiff inherits API design, functionality
@@ -1645,7 +1931,7 @@ you'll find Jiff to be a relatively straightforward translation of Temporal's
 API to Rust. This example shows how to use Temporal to round a calendar span
 to the nearest number of days relative to a date:
 
-```
+```javascript
 const duration = Temporal.Duration.from({ months: 1, days: 1, hours: 1 });
 const roundedDuration = duration.round({
   largestUnit: "days",
@@ -1689,19 +1975,6 @@ larger.
 It's easy to say that without Temporal, Jiff wouldn't exist in its current
 form today.
 
-## The Jiff 1.0 Commitment
-
-Jiff is already used in production in many projects: uv, Cargo, Starship, fd,
-Nushell, mise, Jujutsu, uutils/coreutils and even as the basis for a Temporal
-implementation in AWS LLRT. It is time to call it 1.0.
-
-Unless some significant defect is found in Jiff's API, my plan is to commit
-to Jiff 1.0 indefinitely. This is important because the intent is for Jiff
-to be an ecosystem building block that appears in the public API of other
-libraries. This makes Jiff an attractive _public_ dependency, which means
-semver incompatible releases are likely to cause significant pain in the
-ecosystem. They will not be made lightly.
-
 [Jiff]: https://docs.rs/jiff/1.*
 [pit of success]: https://blog.codinghorror.com/falling-into-the-pit-of-success/
 [adoption]: https://crates.io/crates/jiff/reverse_dependencies
@@ -1743,6 +2016,7 @@ ecosystem. They will not be made lightly.
 [`serde`]: https://serde.rs/
 [`Span::fieldwise`]: https://docs.rs/jiff/1.*/jiff/struct.Span.html#method.fieldwise
 [`Span::compare`]: https://docs.rs/jiff/1.*/jiff/struct.Span.html#method.compare
+[`Span::total`]: https://docs.rs/jiff/1.*/jiff/struct.Span.html#method.total
 [POSIX `strptime`]: https://pubs.opengroup.org/onlinepubs/009695399/functions/strptime.html
 [POSIX `strftime`]: https://pubs.opengroup.org/onlinepubs/009695399/functions/strftime.html
 [`ZonedDateTime::checked_add`]: https://docs.rs/jiff/1.*/jiff/struct.ZonedDateTime.html#method.checked_add
@@ -1752,3 +2026,4 @@ ecosystem. They will not be made lightly.
 [`ZonedDateTimeDifference`]: https://docs.rs/jiff/1.*/jiff/struct.ZonedDateTimeDifference.html
 [`std::time::Instant`]: https://doc.rust-lang.org/nightly/std/time/struct.Instant.html
 [`std::time::SystemTime`]: https://doc.rust-lang.org/nightly/std/time/struct.SystemTime.html
+[`ToSpan`]: https://docs.rs/jiff/1.*/jiff/trait.ToSpan.html
