@@ -60,6 +60,9 @@ libraries. This makes Jiff an attractive _public_ dependency, which means
 semver incompatible releases are likely to cause significant pain in the
 ecosystem. They will not be made lightly.
 
+To see a list of breaking changes between Jiff 0.2 and Jiff 1.0, please
+consult the [CHANGELOG].
+
 ## Introduction
 
 In programming, a datetime library's core functionality rests at the
@@ -2027,3 +2030,4 @@ form today.
 [`std::time::Instant`]: https://doc.rust-lang.org/nightly/std/time/struct.Instant.html
 [`std::time::SystemTime`]: https://doc.rust-lang.org/nightly/std/time/struct.SystemTime.html
 [`ToSpan`]: https://docs.rs/jiff/1.*/jiff/trait.ToSpan.html
+[CHANGELOG]: https://github.com/BurntSushi/jiff/blob/master/CHANGELOG.md#100-2026-11-15
