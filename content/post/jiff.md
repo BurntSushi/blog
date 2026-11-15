@@ -1691,6 +1691,10 @@ form today.
 
 ## The Jiff 1.0 Commitment
 
+Jiff is already used in production in many projects: uv, Cargo, Starship, fd,
+Nushell, mise, Jujutsu, uutils/coreutils and even as the basis for a Temporal
+implementation in AWS LLRT. It is time to call it 1.0.
+
 Unless some significant defect is found in Jiff's API, my plan is to commit
 to Jiff 1.0 indefinitely. This is important because the intent is for Jiff
 to be an ecosystem building block that appears in the public API of other
