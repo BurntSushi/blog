@@ -1978,7 +1978,7 @@ larger.
 It's easy to say that without Temporal, Jiff wouldn't exist in its current
 form today.
 
-[Jiff]: https://docs.rs/jiff/1.*
+[Jiff]: https://github.com/BurntSushi/jiff
 [pit of success]: https://blog.codinghorror.com/falling-into-the-pit-of-success/
 [adoption]: https://crates.io/crates/jiff/reverse_dependencies
 [Temporal]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal
