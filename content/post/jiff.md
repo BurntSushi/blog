@@ -27,6 +27,7 @@ This blog announces the Jiff 1.0 release by giving a tour of its API.
   * [The DateTime Onion](#the-datetime-onion)
   * [Defining a time zone](#defining-a-time-zone)
   * [Durations](#durations)
+  * [When should I use Jiff?](#when-should-i-use-jiff)
 * [Parsing and Formatting](#parsing-and-formatting)
   * [`FromStr` and `Display`](#fromstr-and-display)
   * [`strptime` and `strftime`](#strptime-and-strftime)
@@ -40,6 +41,7 @@ This blog announces the Jiff 1.0 release by giving a tour of its API.
   * [Other Calendars](#other-calendars)
 * [Motivation](#motivation)
 * [Inspiration](#inspiration)
+* [The Jiff 1.0 Commitment](#the-jiff-10-commitment)
 
 ## Introduction
 
@@ -82,7 +84,7 @@ cargo run
 
 ### Terms
 
-I am loathe to present a dictionary. However, the datetime domain is littered
+I am loath to present a dictionary. However, the datetime domain is littered
 with confusable terms, so I think it's important to orient ourselves on a
 shared vocabulary. I've kept this section as small as possible. (Some terms,
 like "time zone," are omitted here because they are best defined through
@@ -94,7 +96,7 @@ time is a human coordinated agreement for communicating time in a particular
 geographic region. Civil time is also known as: local time, plain time, naive
 time, clock time and others.
 * [UTC]: An abbreviation for _Coordinated Universal Time_; it is a time
-standard the serves as the basis for civil time around the world. It was
+standard that serves as the basis for civil time around the world. It was
 originally intended to roughly correspond to [mean solar time].
 * [TAI]: An abbreviation for _International Atomic Time_; it is a time standard
 as measured by atomic clocks. It isn't directly connected to mean solar time.
@@ -485,6 +487,80 @@ powerful than what is shown here. You might even try playing with the examples
 above to explore its nooks and crannies. We'll cover their API in more detail
 in a later section.
 
+### When should I use Jiff?
+
+Jiff isn't always the right thing to use. Sometimes you can get by with
+something simpler.
+
+First and foremost, if you're _measuring_ the time something takes in a
+program, you should almost certainly be using monotonic time. This is
+available via [`std::time::Instant`]:
+
+```rust
+use std::time::{Duration, Instant};
+
+fn main() -> anyhow::Result<()> {
+    let start = Instant::now();
+
+    // do some serious work
+    std::thread::sleep(Duration::from_secs(1));
+
+    let elapsed = Instant::now().duration_since(start);
+    println!("{elapsed:?}");
+
+    Ok(())
+}
+```
+
+If you do need to compute elapsed time using your system clock, then Jiff
+is very convenient for that:
+
+```rust
+use std::time::Duration;
+
+use jiff::Timestamp;
+
+fn main() -> anyhow::Result<()> {
+    // assume `start` came from somewhere
+    // over a network
+    let start = Timestamp::now();
+    std::thread::sleep(Duration::from_secs(1));
+
+    let elapsed = Timestamp::now().duration_since(start);
+    println!("{elapsed}");
+
+    Ok(())
+}
+```
+
+But you don't actually need Jiff for this. A [`std::time::SystemTime`] will
+work perfectly fine:
+
+```rust
+use std::time::{Duration, SystemTime};
+
+fn main() -> anyhow::Result<()> {
+    // assume `start` came from somewhere
+    // over a network
+    let start = SystemTime::now();
+    std::thread::sleep(Duration::from_secs(1));
+
+    let elapsed = SystemTime::now().duration_since(start)?;
+    println!("{elapsed:?}");
+
+    Ok(())
+}
+```
+
+Where Jiff starts to become useful is when you need something beyond just an
+integer number of seconds since the Unix epoch. For example, some very hairy
+math is required in order to convert a `SystemTime` into an RFC 3339 timestamp
+like `2026-11-14T21:34:00Z`.
+
+As long as you can live in UTC completely, don't care about local time and can
+work with Unix timestamps only, then the Rust standard library won't steer you
+wrong.
+
 ## Parsing and Formatting
 
 Conversion to and from strings is a major part of Jiff. Jiff's focus is
@@ -493,7 +569,7 @@ primarily on interoperability via the following:
 * [RFC 3339] specifies a format for fixed offset instants in time, in terms of
 a human readable civil datetime. For example, `2026-11-12T15:36:00-05:00`. This
 is the serialization format used by [`Timestamp`].
-* [RFC 9557] supercedes RFC 3339 to add time zone information. For example,
+* [RFC 9557] supersedes RFC 3339 to add time zone information. For example,
 `2026-11-12T15:36:00-05:00[America/New_York]`. This is the serialization format
 used by [`ZonedDateTime`].
 * [ISO 8601] covers mostly everything else, including durations and
@@ -623,7 +699,7 @@ shortcomings:
 
 1. It is difficult to read. For example, in `P11Y2M28DT5H30M`, the lack of
 whitespace makes the unit values and the unit labels all run together.
-2. An ISO 8601 duration cannot unambiguous represent all possible `Span`
+2. An ISO 8601 duration cannot unambiguously represent all possible `Span`
 values.
 
 The second shortcoming is best seen with an example. Consider a `Span` that is
@@ -823,9 +899,8 @@ fn main() -> anyhow::Result<()> {
 }
 ```
 
-Here, the first occurrence of `01:30` is selected, just before Sydney leaves
-daylight saving time (which they have in the Winter because they're in the
-southern hemisphere). Now, the data itself can actually select the desired
+Here, the first occurrence of `02:30` is selected, just before Sydney leaves
+daylight saving time. Now, the data itself can actually select the desired
 offset:
 
 ```rust
@@ -1005,7 +1080,7 @@ assert_eq!(d.day(), 29);
 ```
 
 That is, `civil::date` is a const function that will panic if its inputs are
-invalid. It should only be used with inputs that are known to be invalid.
+invalid. It should only be used with inputs that are known to be valid.
 It would, for example, be inappropriate to use this with user provided values.
 Because of the `const` block above, if you try to provide invalid values,
 you'll get a compiler error.
@@ -1096,17 +1171,17 @@ assert_eq!(
 // And for a gap, the later instant
 // is chosen by default.
 let zdt =
-    civil::date(2024, 3, 10).at(2, 30, 0, 0).in_tz("America/New_York")?;
+    civil::date(2024, 3, 9).at(2, 30, 0, 0).in_tz("America/New_York")?;
 let tomorrow = zdt.tomorrow()?;
 assert_eq!(
     tomorrow.to_string(),
-    "2024-03-11T03:30:00-04:00[America/New_York]"
+    "2024-03-10T03:30:00-04:00[America/New_York]"
 );
 ```
 
 To override this behavior, you can drop down to civil datetimes, perform the
 operation, and then use `TimeZone::to_ambiguous_zoned_datetime` to control the
-exact disambguation strategy:
+exact disambiguation strategy:
 
 ```rust
 // For a zoned datetime that lands
@@ -1287,13 +1362,222 @@ provide a convenient way to use multiple duration types. But as we'll see,
 it's also used to provide an extension point for configuration options that
 control how the operation works.
 
-BREADCRUMBS: Transition to talking about durations between datetimes.
+In addition to adding or subtracting durations from datetime values, one can
+also compute the duration between two datetime values. For example, to get the
+number of days between two dates:
+
+```rust
+use jiff::{civil, ToSpan};
+
+fn main() -> anyhow::Result<()> {
+    let d1 = civil::date(2024, 5, 31);
+    let d2 = civil::date(2024, 9, 30);
+    assert_eq!(d2 - d1, 122.days().fieldwise());
+
+    Ok(())
+}
+```
+
+Similarly, we can use [`Date::until`] to compute the span between dates:
+
+```rust
+let d1 = civil::date(2024, 5, 31);
+let d2 = civil::date(2024, 9, 30);
+assert_eq!(d1.until(d2)?, 122.days().fieldwise());
+```
+
+Like with `Date::checked_add`, this routine is also available at
+[`ZonedDateTime::until`]:
+
+```rust
+let zdt1 = civil::date(2024, 5, 31).in_tz("America/New_York")?;
+let zdt2 = civil::date(2024, 9, 30).in_tz("America/New_York")?;
+assert_eq!(zdt1.until(&zdt2)?, 2928.hours().fieldwise());
+```
+
+Notice though that hours, instead of days, are returned. This is because two
+`ZonedDateTime` values might be in different time zones. Since a `ZonedDateTime`
+is fundamentally an instant in time, and because days might be of varying length
+depending on the time zone, defaulting to hours as the largest possible unit
+means subtracting two zoned datetimes will always succeed. However, we can
+request larger units in the duration returned by passing additional options.
+Notably, `ZonedDateTime::until` is polymorphic:
+
+```rust
+pub fn until<'a, A: Into<ZonedDateTimeDifference<'a>>>(
+    &self,
+    other: A,
+) -> Result<Span, Error>
+```
+
+That is, callers aren't just limited to passing a `ZonedDateTime` here, but
+_anything_ that can be converted to a [`ZonedDateTimeDifference`]. Here is
+one such example, where we can override the largest units returned in the
+duration:
+
+```rust
+use jiff::{civil, ToSpan, Unit};
+
+fn main() -> anyhow::Result<()> {
+    let zdt1 = civil::date(2024, 5, 31).in_tz("America/New_York")?;
+    let zdt2 = civil::date(2024, 9, 30).in_tz("America/New_York")?;
+    assert_eq!(
+        zdt1.until((Unit::Month, &zdt2))?,
+        3.months().days(30).fieldwise()
+    );
+
+    Ok(())
+}
+```
+
+A `ZonedDateTimeDifference` provides much more powerful configuration options
+for rounding the span returned. Take this example, which produces a span with
+many unit values:
+
+```rust
+use jiff::{civil::date, ToSpan, Unit};
+
+fn main() -> anyhow::Result<()> {
+    let zdt1 =
+        date(2024, 5, 15).at(14, 30, 54, 0).in_tz("America/New_York")?;
+    let zdt2 = date(2024, 5, 31)
+        .at(19, 13, 27, 123_456_789)
+        .in_tz("America/New_York")?;
+    assert_eq!(
+        zdt1.until((Unit::Day, &zdt2))?,
+        16.days()
+            .hours(4)
+            .minutes(42)
+            .seconds(33)
+            .milliseconds(123)
+            .microseconds(456)
+            .nanoseconds(789)
+            .fieldwise(),
+    );
+
+    Ok(())
+}
+```
+
+This might be _too_ much precision to show to an end user. Instead, perhaps
+we'd like to _round_ the span to the nearest half-hour. We can do this by
+building a `ZonedDateTimeDifference` explicitly and configuring its options:
+
+```rust
+use jiff::{civil::date, RoundMode, ToSpan, Unit, ZonedDateTimeDifference};
+
+fn main() -> anyhow::Result<()> {
+    let zdt1 =
+        date(2024, 5, 15).at(14, 30, 54, 0).in_tz("America/New_York")?;
+    let zdt2 = date(2024, 5, 31)
+        .at(19, 13, 27, 123_456_789)
+        .in_tz("America/New_York")?;
+    let difference = ZonedDateTimeDifference::new(&zdt2)
+        .largest(Unit::Day)
+        .smallest(Unit::Minute)
+        .increment(30)
+        .mode(RoundMode::HalfExpand);
+    assert_eq!(
+        zdt1.until(difference)?,
+        16.days().hours(4).minutes(30).fieldwise(),
+    );
+
+    Ok(())
+}
+```
+
+Note also that rounding a span takes time zone transitions like daylight saving
+time into account. For example, let's take `2024-11-02 17:30` and
+`2024-11-03 04:45` in New York. Because New York stopped daylight saving time
+at 2AM on 2024-11-03, the amount of physical time between them is 12 hours and
+15 minutes:
+
+```rust
+let zdt1 = date(2024, 11, 2).at(17, 30, 0, 0).in_tz("America/New_York")?;
+let zdt2 = date(2024, 11, 3).at(4, 45, 0, 0).in_tz("America/New_York")?;
+assert_eq!(zdt2 - zdt1, 12.hours().minutes(15).fieldwise());
+```
+
+Normally, if we rounded to the nearest day, this would round up to 1 day. But
+since the midpoint of this particular day is actually 12 hours and 30 minutes,
+this duration will round down to 0 days when we request it:
+
+```rust
+use jiff::{civil::date, RoundMode, ToSpan, Unit, ZonedDateTimeDifference};
+
+fn main() -> anyhow::Result<()> {
+    let zdt1 = date(2024, 11, 2).at(17, 30, 0, 0).in_tz("America/New_York")?;
+    let zdt2 = date(2024, 11, 3).at(4, 45, 0, 0).in_tz("America/New_York")?;
+    let difference = ZonedDateTimeDifference::new(&zdt2)
+        .largest(Unit::Day)
+        .smallest(Unit::Day)
+        .mode(RoundMode::HalfExpand);
+    assert_eq!(zdt1.until(difference)?, 0.days().fieldwise());
+
+    Ok(())
+}
+```
+
+Next we'll continue our discussion of rounding, but when applied to datetimes
+themselves.
 
 ### Date Rounding
 
+Date rounding in Jiff is limited to units of days or lower. Therefore, it's
+only available on [`ZonedDateTime`], [`Timestamp`], [`civil::DateTime`],
+[`civil::Time`] but not [`civil::Date`].
+
+A common example for rounding a datetime is to reduce precision. For example,
+a system clock might provide nanosecond precision, but maybe we only care about
+the nearest half-hour:
+
+```rust
+use jiff::{civil::date, Unit};
+
+fn main() -> anyhow::Result<()> {
+    let zdt = date(2024, 11, 2)
+        .at(17, 46, 20, 123_456_789)
+        .in_tz("America/New_York")?;
+    assert_eq!(
+        zdt.to_string(),
+        "2024-11-02T17:46:20.123456789-04:00[America/New_York]"
+    );
+
+    // Round to the nearest half hour.
+    let rounded = zdt.round((Unit::Minute, 30))?;
+    assert_eq!(
+        rounded.to_string(),
+        "2024-11-02T18:00:00-04:00[America/New_York]"
+    );
+
+    Ok(())
+}
+```
+
+As with rounding spans, rounding a `ZonedDateTime` is aware of time zone
+transitions:
+
+```rust
+let zdt = date(2024, 11, 3)
+    .at(11, 45, 20, 123_456_789)
+    .in_tz("America/New_York")?;
+
+// Round to the nearest day.
+let rounded = zdt.round(Unit::Day)?;
+assert_eq!(
+    rounded.to_string(),
+    "2024-11-04T00:00:00-05:00[America/New_York]"
+);
+```
+
+Notice that in the above example, our time of 11:45AM is _before_ noon, yet the
+result still rounds _up_ to the next day. This is because the midpoint for this
+day is 11:30AM since, by 11:30AM, 12.5 hours have already elapsed because of
+the repeated 1AM hour in the move away from daylight saving time in New York.
+
 ### Other Calendars
 
-Jiff itself doesn't support any calendars other than the propleptic Gregorian
+Jiff itself doesn't support any calendars other than the proleptic Gregorian
 calendar. One can instead use the [ICU4X] crate to work in non-Gregorian
 calendars, and convert between datetime types using the [`jiff-icu`] crate:
 (Use `cargo add icu jiff-icu` to make this example work.)
@@ -1315,7 +1599,7 @@ fn main() -> anyhow::Result<()> {
 
     // Secondly, convert it to a civil datetime.
     // This will automatically use ICU to convert
-    // the date from the Hewbrew calendar to the
+    // the date from the Hebrew calendar to the
     // Gregorian (or ISO) calendar.
     let zdt = DateTime::convert_try_from(datetime)?;
     assert_eq!(zdt.to_string(), "2025-02-02T17:30:00");
@@ -1357,9 +1641,9 @@ and does not aim to be a 100% compatible implementation of the Temporal
 specification. Jiff is meant to be a Rust ecosystem library first and foremost.
 
 With that said, if you're familiar with Temporal and Rust, then it's likely
-you'll find Jiff to be a relatively straight-forward translation of Temporal's
+you'll find Jiff to be a relatively straightforward translation of Temporal's
 API to Rust. This example shows how to use Temporal to round a calendar span
-to a nearest number of days relative to a date:
+to the nearest number of days relative to a date:
 
 ```
 const duration = Temporal.Duration.from({ months: 1, days: 1, hours: 1 });
@@ -1399,11 +1683,20 @@ Here are some other differences:
 confusion with Rust's standard library `std::time::Instant` type.
 * Temporal's "plain" date and time types are called "civil" in Jiff.
 * Jiff only supports the Gregorian calendar.
-* Jiff's datetime range only extends to +/- 9999, where as Temporal's range is
+* Jiff's datetime range only extends to +/- 9999, whereas Temporal's range is
 larger.
 
 It's easy to say that without Temporal, Jiff wouldn't exist in its current
 form today.
+
+## The Jiff 1.0 Commitment
+
+Unless some significant defect is found in Jiff's API, my plan is to commit
+to Jiff 1.0 indefinitely. This is important because the intent is for Jiff
+to be an ecosystem building block that appears in the public API of other
+libraries. This makes Jiff an attractive _public_ dependency, which means
+semver incompatible releases are likely to cause significant pain in the
+ecosystem. They will not be made lightly.
 
 [Jiff]: https://docs.rs/jiff/1.*
 [pit of success]: https://blog.codinghorror.com/falling-into-the-pit-of-success/
@@ -1450,3 +1743,8 @@ form today.
 [POSIX `strftime`]: https://pubs.opengroup.org/onlinepubs/009695399/functions/strftime.html
 [`ZonedDateTime::checked_add`]: https://docs.rs/jiff/1.*/jiff/struct.ZonedDateTime.html#method.checked_add
 [`ZonedDateTimeArithmetic`]: https://docs.rs/jiff/1.*/jiff/struct.ZonedDateTimeArithmetic.html
+[`Date::until`]: https://docs.rs/jiff/1.*/jiff/civil/struct.Date.html#method.until
+[`ZonedDateTime::until`]: https://docs.rs/jiff/1.*/jiff/struct.ZonedDateTime.html#method.until
+[`ZonedDateTimeDifference`]: https://docs.rs/jiff/1.*/jiff/struct.ZonedDateTimeDifference.html
+[`std::time::Instant`]: https://doc.rust-lang.org/nightly/std/time/struct.Instant.html
+[`std::time::SystemTime`]: https://doc.rust-lang.org/nightly/std/time/struct.SystemTime.html
